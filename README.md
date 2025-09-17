@@ -7,6 +7,12 @@ docker compose up -d
 
 Dans Panneau administrateur > Reglages > recherche WEb "http://searxng:8080/search"
 
+
+
+
+
+
+
 set -euo pipefail
 
 # (re)start Ollama GPU en propre
