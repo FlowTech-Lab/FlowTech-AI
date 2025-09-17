@@ -1,3 +1,6 @@
+networks:
+  flow-ai-network:
+    driver: bridge
 services:
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
@@ -15,7 +18,50 @@ services:
     environment:
       SEARXNG_SETTINGS_PATH: /etc/searxng/settings.yml
     volumes:
-      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
-#      - ./AI_Data/searxng:/app/data
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:rw
+      - ./searxng/limiter.toml:/etc/searxng/limiter.toml:ro
+ #     - ./AI_Data/searxng:/app/data
     ports:
       - "${SEARXNG_PORT:-8082}:8080"
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-n8n}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-n8npassword}
+      POSTGRES_DB: ${POSTGRES_DB:-n8n}
+    volumes:
+      - ./AI_Data/pgdata:/var/lib/postgresql/data
+    networks:
+      - flow-ai-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n} -d ${POSTGRES_DB:-n8n}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    networks: ['flow-ai-network']
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false   # désactive la vérif permissions
+      - N8N_RUNNERS_ENABLED=true                      # active les runners
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false            # maintient l’accès env
+      - N8N_SECURE_COOKIE=false                       # passe outre le secure cookie
+      - GENERIC_TIMEZONE=Europe/Paris
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - ./AI_Data/n8n:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
