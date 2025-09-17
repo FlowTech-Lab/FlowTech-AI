@@ -1,0 +1,60 @@
+use_default_settings: true
+
+engines:
+  - name: google
+    engine: google
+    disabled: false
+  - name: bing
+    engine: bing
+    disabled: false
+  - name: duckduckgo
+    engine: duckduckgo
+    disabled: false
+  - name: wikipedia
+    engine: wikipedia
+    disabled: false
+  - name: qwant
+    engine: qwant
+    disabled: false
+  - name: startpage
+    engine: startpage
+    disabled: false
+  - name: yahoo
+    engine: yahoo
+    disabled: false
+  - name: brave
+    engine: brave
+    disabled: false
+  - name: searxng
+    engine: searxng
+    disabled: false
+
+
+default_doi_resolver: 'oadoi.org'
+doi_resolvers:
+  oadoi.org: 'https://oadoi.org/'
+  doi.org: 'https://doi.org/'
+  doai.io: 'https://dissem.in/'
+  sci-hub.se: 'https://sci-hub.se/'
+  sci-hub.st: 'https://sci-hub.st/'
+  sci-hub.ru: 'https://sci-hub.ru/'
+
+server:
+  bind_address: 0.0.0.0
+  port: 8080
+  base_url: "http://127.0.0.1:8082/"
+  secret_key: "change_me"
+  limiter: false
+  trust_http_x_forwarded_for: false
+  num_proxies: 0
+
+botdetection:
+  enabled: false
+
+search:
+  safe_search: 0
+  formats: [html, json]
+
+ui:
+  theme_args:
+    theme: auto
