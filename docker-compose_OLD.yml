@@ -73,3 +73,24 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+#  whisper:
+#    image: onerahmet/openai-whisper-asr-webservice:latest
+#    restart: unless-stopped
+#    ports:
+#      - "9000:9000"
+#    environment:
+#      - ASR_MODEL=small
+
+#  piper:
+#    image: rhasspy/wyoming-piper:latest
+#    restart: unless-stopped
+#    ports:
+#      - "10200:10200"
+#    environment:
+#      - VOICE=fr_FR-siwis-low
+
+#  comfyui:
+#    image: ghcr.io/comfyanonymous/comfyui:latest
+#    restart: unless-stopped
+#    ports:
+#      - "8188:8188"

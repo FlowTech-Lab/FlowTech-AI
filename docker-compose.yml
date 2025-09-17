@@ -1,41 +1,21 @@
 services:
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
-    container_name: openwebui
     restart: unless-stopped
     environment:
-      - OLLAMA_BASE_URL=http://192.168.0.2:11434
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
     volumes:
-      - /opt/openwebui/data:/app/backend/data
+      - ./AI_Data/openwebui:/app/backend/data
     ports:
-      - "8081:8080"
+      - "${OPENWEBUI_PORT:-8081}:8080"
 
   searxng:
     image: searxng/searxng:latest
-    ports: ["8082:8080"]
+    restart: unless-stopped
     environment:
-      - SEARXNG_SETTINGS_PATH=/etc/searxng/settings.yml
+      SEARXNG_SETTINGS_PATH: /etc/searxng/settings.yml
     volumes:
-      - /opt/openwebui/searxng/:/etc/searxng/
-
-#  whisper:
-#    image: onerahmet/openai-whisper-asr-webservice:latest
-#    restart: unless-stopped
-#    ports:
-#      - "9000:9000"
-#    environment:
-#      - ASR_MODEL=small
-
-#  piper:
-#    image: rhasspy/wyoming-piper:latest
-#    restart: unless-stopped
-#    ports:
-#      - "10200:10200"
-#    environment:
-#      - VOICE=fr_FR-siwis-low
-
-#  comfyui:
-#    image: ghcr.io/comfyanonymous/comfyui:latest
-#    restart: unless-stopped
-#    ports:
-#      - "8188:8188"
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+#      - ./AI_Data/searxng:/app/data
+    ports:
+      - "${SEARXNG_PORT:-8082}:8080"
