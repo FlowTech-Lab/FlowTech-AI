@@ -35,7 +35,7 @@ touch .env
 uid="$(id -u)"
 gid="$(id -g)"
 
-mkdir -p ./AI_Data/{openwebui,pgdata,n8n,searxng,qdrant}
+mkdir -p ./AI_Data/{openwebui,pgdata,n8n,searxng,qdrant,clickhouse}
 chmod -R 700 ./AI_Data
 chown -R "$uid:$gid" ./AI_Data 2>/dev/null || true
 
