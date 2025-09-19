@@ -10,6 +10,9 @@ docker exec -it postgres psql -U ${POSTGRES_USER:-n8n} -c 'CREATE DATABASE langf
 
 Dans Panneau administrateur > Reglages > recherche WEb "http://searxng:8080/search"
 
+### Troubleshooting
+- If the stack refuses to start cleanly, remove the generated data and environment files (`rm -rf AI_Data .env`) and re-run `./init.sh` before launching `docker compose up -d` again.
+
 
 
 Activer le pipeline Langfuse dans OpenWebUI
