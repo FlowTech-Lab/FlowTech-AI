@@ -5,15 +5,32 @@
 ./init.sh
 docker compose up -d
 
+docker exec -it postgres psql -U ${POSTGRES_USER:-n8n} -c 'CREATE DATABASE langfuse;'
+
+
 Dans Panneau administrateur > Reglages > recherche WEb "http://searxng:8080/search"
 
 
 
+Activer le pipeline Langfuse dans OpenWebUI
+
+Deux options valides :
+
+UI : OpenWebUI → Settings → Pipelines → Add Filter → “Langfuse” → renseigne LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY. 
+Langfuse
++1
+
+Via env : tu as déjà posé LANGFUSE_* dans openwebui. Le filtre les lit et trace les messages sans code additionnel, comme indiqué par la doc Pipelines
 
 
 
+Générer les clés
 
+Ouvre Langfuse: http://localhost:${LANGFUSE_PORT}
 
+Crée le premier compte, l’organisation, puis un projet.
+
+Project → Settings → API Keys → Create API Key. Récupère Public et Secret.
 
 
 

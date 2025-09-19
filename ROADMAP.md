@@ -4,9 +4,12 @@
 Renforcer d’abord les fondations (RAG natif, pipelines, traçabilité) avant d’industrialiser l’orchestration multi-agents puis d’ouvrir les spécialisations. Cette séquence offre des retours rapides, un socle stable et une montée en charge progressive.
 
 ## Étape 1 – Fondations & Quick Wins (Jours 0–30)
-- ⬜ **Activer RAG natif + Pipelines OpenWebUI** (OCR, ingestion, RLHF) ; aujourd’hui `VECTOR_DB`/`RAG_VECTOR_DB` sont encore commentés dans `docker-compose.yml`.
 - ⬜ **Brancher Langfuse immédiatement** pour suivre prompts, latences P95/P99 et erreurs (aucune config Langfuse présente dans le dépôt).
-- ⬜ **Créer les répertoires Nextcloud `/FPV_Public/` et `/FPV_Privé/`** et leurs flux d’ingestion associés.
+- ⬜ **Activer RAG natif + Pipelines OpenWebUI** (OCR, ingestion, RLHF) ; aujourd’hui `VECTOR_DB`/`RAG_VECTOR_DB` sont encore commentés dans `docker-compose.yml`.
+- ⬜ **Créer les répertoires Nextcloud alignés avec Qdrant**  
+  - `/docs_public/` → contenu auto-vectorisé (guides, docs techniques, logs généraux) → Qdrant `docs_public`.  
+  - `/docs_prive/` → fichiers sensibles, vectorisation uniquement si approbation manuelle → Qdrant `docs_prive`.  
+  - `/convos_long/` → stockage brut des conversations longues (journalisation), relayé vers Qdrant `convos_long` par n8n.
 - ⬜ **Déployer Loki** pour collecter les logs n8n/OpenWebUI (stack actuelle limitée à Prometheus/Grafana sur VM externe, non raccordés).
 - ⬜ **Mettre en place webhooks n8n signés HMAC + RBAC OpenWebUI** (Basic Auth n8n déjà activée, mais HMAC/Rate-limit/RBAC non documentés).
 - ⬜ **Valider le pipeline “résumé PDF/logs”** : OpenWebUI → pipeline OCR → webhook n8n agent summary → retour UI.
