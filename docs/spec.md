@@ -16,14 +16,15 @@
 - **Sauvegardes** : Proxmox Backup Server couvre `./AI_Data/openwebui`, `./AI_Data/n8n`, `./AI_Data/qdrant`, `./AI_Data/pgdata`.
 
 ### 2.2 Services & interconnexions
+- **Orchestration** : stack maintenue sur Docker Compose (Kubernetes/k3s non retenu à ce stade).
 - **OpenWebUI** : UI principale, pipelines et RAG natifs activés (`VECTOR_DB=qdrant`, `RAG_VECTOR_DB=qdrant`, `CHAT_HISTORY_LIMIT=20`). OpenWebUI n'écrit pas l'historique de chat dans Qdrant et n'utilise que les collections documents (`docs_public`, `docs_prive`). La mémoire longue des conversations est gérée par n8n dans la collection `convos_long`. Pipelines Python personnalisés pour OCR, ingestion, agents spécialisés.
-- **Ollama** : modèles locaux (`Qwen2.5-7B-Instruct` en défaut, `Llama-3-3B` fallback) ; routage simple, option forcer 7B et délégation GPU externe.
+- **Ollama** : modèles locaux (`Qwen2.5-7B-Instruct` en défaut, `Llama-3-3B` fallback) ; routage simple, option forcer 7B et délégation GPU externe. Tests des quantifications (`Q4_K_M`, `Q8`) prévus pour Qwen2.5-7B avec mesure des latences P95/P99 via Langfuse ; Triton/FasterTransformers non retenus à ce stade (GPU 1660 Ti).
 - **n8n** : orchestrateur principal, webhooks internes (`/webhook/owui-router`), runners activés, stockage d’état agents dans Postgres pour workflows longue durée.
-- **Qdrant** : mémoire vectorielle (espaces public/safe/privé) ; non exposé, accessible depuis OpenWebUI et n8n via réseau interne.
+- **Qdrant** : mémoire vectorielle (espaces public/safe/privé) ; non exposé, accessible depuis OpenWebUI et n8n via réseau interne. Possibilité d'ajouter Redis ou Memcached si la latence des embeddings devient un point de friction.
 - **Postgres** : base n8n + persistance des états d’agents/pipe, LAN-only.
 - **SearxNG** : moteur de recherche ; exposable via Cloudflare si besoin.
 - **Prometheus/Grafana** : VM existante, export métriques OpenWebUI (HTTP exporter), n8n et Ollama ; alertes routées par n8n vers Discord/Telegram.
-- **Réseau** : exposition minimale via pfSense/Cloudflare Zero Trust (si accès distant) ; allowlist IP entre VMs pour OWUI ⇄ n8n ⇄ Qdrant/Postgres.
+- **Réseau** : exposition minimale via pfSense/Cloudflare Zero Trust (si accès distant) ; allowlist IP entre VMs pour OWUI ⇄ n8n ⇄ Qdrant/Postgres. Keycloak ou Authelia pourront être introduits plus tard si un besoin MFA/SSO apparaît, sans priorité immédiate.
 
 ### 2.3 Volumes & environnements
 - Volumes dynamiques co-localisés avec `docker-compose.yml` (`./AI_Data/...`).
@@ -41,6 +42,11 @@
 - Qdrant : ports non exposés, segmentation public/safe/privé, tags par projet (FPV, infra, dev, etc.).
 - n8n : accès LAN, Basic Auth + `WEBHOOK_SECRET`, webhooks signés HMAC et rate-limités.
 - PBS : sauvegarde volumes critiques + tests de restauration trimestriels.
+
+### 2.6 Observabilité
+- Langfuse déployé dès la phase Quick Wins pour tracer prompts, latences (P95/P99) et erreurs.
+- Prometheus + Grafana + Loki pour unifier métriques et logs (n8n, OpenWebUI, Ollama) et alimenter les dashboards.
+- Rapport mensuel automatisé via n8n (Markdown/PDF) exporté vers Nextcloud pour suivre performances et incidents.
 
 ## 3. Gestion des fichiers & données
 ### 3.1 Priorités de vectorisation
@@ -65,7 +71,7 @@
 ## 4. Intelligence & workflows IA
 ### 4.1 Mémoire & RAG
 - **OpenWebUI** : mémoire courte (20 messages) + RAG natif (top_k adaptable) avec heuristiques pipelines ; RLHF intégré pour affiner les réponses.
-- **Qdrant** : mémoire longue, segmentation par projet et sensibilité ; tags pour retrouver les conversations et sources.
+- **Qdrant** : mémoire longue, segmentation par projet et sensibilité ; tags pour retrouver les conversations et sources. Weaviate multimodal pourra être évalué si un besoin vision+texte apparaît.
 - **n8n** : déclenche le RAG long (top_k réduit, filtres par tags) lorsque l’heuristique pipeline indique un besoin contexte étendu.
 
 ### 4.2 Orchestration multi-agents
@@ -87,7 +93,7 @@
 
 ## 5. Sécurité & accès
 ### 5.1 Exposition & authentification
-- Pas de SSO (Traefik/Authelia retirés) ; auth native + RBAC OpenWebUI activé (rôles Admin/Editor/User).
+- Pas de SSO (Traefik/Authelia retirés) ; auth native + RBAC OpenWebUI activé obligatoirement dès le déploiement (rôles Admin/Editor/User).
 - OpenWebUI & n8n derrière Cloudflare Zero Trust uniquement si accès distant ; sinon LAN-only.
 - SearxNG : exposé via Cloudflare si usage externe, sinon LAN.
 - Grafana/Prometheus : LAN par défaut ; accès restreint par firewall.
@@ -95,12 +101,12 @@
 
 ### 5.2 Gestion des secrets
 - Secrets dans `.env` chiffrés, sauvegardés dans PBS ; rotation semestrielle automatisée par rappel n8n.
-- Masquage automatique (nœuds Code n8n) avant log ou stockage ; interdiction d’insérer secrets dans prompts.
+- Masquage automatique (nœuds Code n8n) avant log ou stockage pour toute PII/clé/secret ; interdiction d’insérer secrets dans prompts.
 
 ### 5.3 Validation & durcissement
 - Flux critique : OpenWebUI → pipeline → n8n → Discord Approve/Reject → exécution.
 - Actions couvertes : modifications fichiers sensibles, snapshots/reboots, déploiements, automatisations destructrices.
-- Webhooks : HMAC + rate-limit, purge automatique de l’historique conversationnel au-delà de 20 échanges.
+- Webhooks n8n : obligatoirement LAN-only, signés HMAC et protégés par un rate-limit de 20 req/min/IP, avec purge automatique de l’historique conversationnel au-delà de 20 échanges.
 - Community Leaderboard : activée uniquement pour admins afin de vérifier la qualité des réponses avant diffusion.
 - Mises à jour : patch mensuel conteneurs, revue trimestrielle dépendances et pipelines personnalisés.
 
@@ -157,6 +163,7 @@
 - Optimisation continue via RLHF + Langfuse (dataset d’entraînement, ajustement heuristiques).
 
 ## 8. Services & priorisation
+Les services d’expérimentation (Flowise, Neo4j, Vault, etc.) restent optionnels et ne seront activés qu’après stabilisation de Langfuse, RBAC et HMAC.
 | Priorité | Service | Usage principal |
 |----------|---------|-----------------|
 | 1 | Qdrant | Mémoire vectorielle & recherche sémantique |
