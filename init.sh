@@ -585,8 +585,28 @@ if [ -d searxng ]; then
   
   local org_id="${LANGFUSE_INIT_ORG_ID:-FlowTech-LAB}"
   local proj_id="${LANGFUSE_INIT_PROJECT_ID:-default}"
-  local user_mail="${LANGFUSE_INIT_USER_EMAIL:-admin@local}"
   local user_name="${LANGFUSE_INIT_USER_NAME:-Admin}"
+  
+  # Demander l'email de l'utilisateur si pas défini
+  local user_mail
+  if [ -z "$(get_env_value LANGFUSE_INIT_USER_EMAIL)" ]; then
+    printf "\n${YELLOW}Configuration Langfuse - Email utilisateur${RESET}\n"
+    printf "Entrez l'email de l'utilisateur administrateur Langfuse: "
+    read -r user_mail
+    
+    # Validation basique de l'email
+    if [[ ! "$user_mail" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+      log_error "Email invalide: $user_mail"
+      log_error "Format attendu: utilisateur@domaine.com"
+      exit 1
+    fi
+    
+    set_env_value LANGFUSE_INIT_USER_EMAIL "$user_mail" enforce
+    log_info "Email utilisateur Langfuse configuré: $user_mail"
+  else
+    user_mail=$(get_env_value LANGFUSE_INIT_USER_EMAIL)
+    log_info "Email utilisateur Langfuse déjà configuré: $user_mail"
+  fi
   
   # Génération des clés API si nécessaire
   if [ -z "$(get_env_value LANGFUSE_INIT_USER_PASSWORD)" ]; then
