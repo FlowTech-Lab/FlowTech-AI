@@ -34,7 +34,7 @@ The optimized `init.sh` script automatically handles:
 - **MinIO** : S3-compatible storage
 
 #### 🔧 External Dependencies
-- **Ollama** : Local LLM engine (192.168.0.2:11434) - **CRITICAL**
+- **Ollama** : Local LLM engine - **CRITICAL**
 
 ### 🏗️ Architecture
 
@@ -59,6 +59,18 @@ The optimized `init.sh` script automatically handles:
 
 ### 🔧 Configuration
 
+#### Network Configuration
+- **External Access**: Use `192.168.0.246` for LAN access
+- **Internal Docker**: Services use container names (e.g., `http://qdrant:6333`)
+- **Local Access**: Use `localhost` when accessing from the same machine
+
+#### Important Environment Variables
+- **N8N_SECURITY_API_BEARER_AUTH**: Bearer token for n8n webhook authentication
+- **LANGFUSE_INIT_USER_EMAIL**: Admin email for Langfuse
+- **LANGFUSE_INIT_USER_PASSWORD**: Admin password for Langfuse
+- **N8N_BASIC_AUTH_USER**: n8n admin username
+- **N8N_BASIC_AUTH_PASSWORD**: n8n admin password
+
 #### OpenWebUI Setup
 In Admin Panel > Settings > Web Search: `http://searxng:8080/search`
 
@@ -74,6 +86,7 @@ In Admin Panel > Settings > Web Search: `http://searxng:8080/search`
 ```bash
 # Edit init.sh and set DEV_MODE=true
 # Then run:
+chmod +x init.sh
 ./init.sh
 ```
 
@@ -91,6 +104,29 @@ curl -s http://localhost:8082  # SearxNG
 curl -s http://localhost:3300  # Langfuse
 curl -s http://localhost:6333  # Qdrant
 ```
+### 🌐 Network URLs
+
+#### External Access (LAN)
+- **OpenWebUI**: http://x.x.x.x:8081
+- **n8n**: http://x.x.x.x:5678
+- **SearxNG**: http://x.x.x.x:8082
+- **Langfuse**: http://x.x.x.x:3300
+- **Qdrant**: http://x.x.x.x:6333
+- **MinIO**: http://x.x.x.x:9092
+
+#### Internal Docker Communication
+| Service | Container Name | Internal URL | Port | Usage |
+|---------|----------------|--------------|------|-------|
+| **PostgreSQL** | `flowtech-ai-postgres-1` | `postgres:5432` | 5432 | n8n database |
+| **Redis** | `redis` | `redis:6379` | 6379 | cache and queues |
+| **MinIO** | `minio` | `minio:9000` | 9000 | S3-compatible storage |
+| **ClickHouse** | `clickhouse` | `clickhouse:8123` | 8123 | analytics database |
+| **Qdrant** | `qdrant` | `http://qdrant:6333` | 6333 | vector storage |
+| **Langfuse Worker** | `langfuse-worker` | `langfuse-worker:3030` | 3030 | background processing |
+| **Langfuse Web** | `langfuse-web` | `langfuse-web:3000` | 3000 | web interface |
+| **n8n** | `flowtech-ai-n8n-1` | `n8n:5678` | 5678 | workflow orchestrator |
+| **OpenWebUI** | `flowtech-ai-openwebui-1` | `openwebui:8080` | 8080 | main AI interface |
+| **SearxNG** | `flowtech-ai-searxng-1` | `http://searxng:8080` | 8080 | web search engine |
 
 ### 📚 Documentation
 

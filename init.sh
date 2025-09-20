@@ -54,7 +54,7 @@ readonly MIN_FREE_SPACE_KB=2097152  # 2GB en KB
 # =============================================================================
 # OPTION DE DÉVELOPPEMENT - MODIFIER ICI POUR LE RESET COMPLET
 # =============================================================================
-readonly DEV_MODE=true  # true = supprime .env, AI_Data et logs (DEV ONLY!)
+readonly DEV_MODE=false  # true = supprime .env, AI_Data et logs (DEV ONLY!)
 # =============================================================================
 
 # =============================================================================
@@ -310,18 +310,8 @@ set_secure_permissions() {
 ensure_required_files() {
   log_info "Vérification des fichiers requis"
   
-  # Vérifier que les fichiers existent et sont exécutables
-  if [ ! -f "wait-for-it.sh" ] || [ ! -x "wait-for-it.sh" ]; then
-    log_error "Fichier wait-for-it.sh manquant ou non exécutable"
-    log_info "Veuillez créer ce fichier avant de continuer"
-    exit 1
-  fi
-  
-  if [ ! -f "langfuse-entrypoint.sh" ] || [ ! -x "langfuse-entrypoint.sh" ]; then
-    log_error "Fichier langfuse-entrypoint.sh manquant ou non exécutable"
-    log_info "Veuillez créer ce fichier avant de continuer"
-    exit 1
-  fi
+  # Vérification des prérequis système
+  log_info "Vérification des prérequis système"
   
   log_ok "Fichiers requis présents et exécutables"
 }
@@ -334,14 +324,10 @@ fix_docker_compose() {
   # Sauvegarder le fichier original
   cp docker-compose.yml docker-compose.yml.backup 2>/dev/null || true
   
-  # Supprimer les volumes problématiques pour langfuse-web et langfuse-worker
-  sed -i '/- \.\/wait-for-it.sh:\/wait-for-it.sh:ro/d' docker-compose.yml
-  sed -i '/- \.\/langfuse-entrypoint.sh:\/langfuse-entrypoint.sh:ro/d' docker-compose.yml
+  # Configuration docker-compose.yml optimisée
+  log_info "Configuration docker-compose.yml optimisée"
   
-  # Supprimer les entrypoints personnalisés
-  sed -i '/entrypoint: \["\/langfuse-entrypoint.sh"\]/d' docker-compose.yml
-  
-  log_ok "Fichier docker-compose.yml corrigé (volumes et entrypoints supprimés)"
+  log_ok "Fichier docker-compose.yml configuré"
 }
 
 
@@ -405,8 +391,9 @@ show_final_summary() {
   echo "  📊 ClickHouse (Analytics):       http://localhost:8123"
   echo
   log_info "🔑 Identifiants par défaut :"
-  echo "  • Langfuse: admin@local / $(get_env_value LANGFUSE_INIT_USER_PASSWORD)"
-  echo "  • N8N: Utilisez l'authentification de base configurée"
+  echo "  • Langfuse: $(get_env_value LANGFUSE_INIT_USER_EMAIL) / $(get_env_value LANGFUSE_INIT_USER_PASSWORD)"
+  echo "  • N8N: $(get_env_value N8N_BASIC_AUTH_USER) / $(get_env_value N8N_BASIC_AUTH_PASSWORD)"
+  echo "  • N8N Bearer Token: $(get_env_value N8N_SECURITY_API_BEARER_AUTH)"
   echo
   log_info "📁 Fichiers importants :"
   echo "  • Configuration: .env"
@@ -504,13 +491,13 @@ umask 077
   gid=$(id -g)
   
   # Création des répertoires avec structure optimisée
-  local dirs=("openwebui" "n8n" "searxng" "qdrant" "clickhouse" "clickhouse-logs" "minio" "pgdata" "postgres-init")
+  local dirs=("openwebui" "n8n" "searxng" "qdrant" "clickhouse" "clickhouse-logs" "minio" "pgdata" "postgres-init" "redis")
   for dir in "${dirs[@]}"; do
     mkdir -p "${AI_DATA_DIR}/$dir"
   done
   
   # Application des permissions sécurisées
-for dir in openwebui n8n qdrant pgdata; do
+for dir in openwebui n8n qdrant pgdata redis; do
     set_secure_permissions "${AI_DATA_DIR}/$dir" 700 600
   done
   
@@ -686,6 +673,27 @@ if [ -d searxng ]; then
     secret_key="lf_sk_$(openssl rand -hex 32)"
     set_env_value LANGFUSE_INIT_PROJECT_SECRET_KEY "$secret_key" enforce
     log_info "Clé API secrète Langfuse générée"
+  fi
+  
+  # Génération des variables n8n
+  if [ -z "$(get_env_value N8N_BASIC_AUTH_USER)" ]; then
+    set_env_value N8N_BASIC_AUTH_USER "admin" enforce
+    log_info "Utilisateur n8n configuré"
+  fi
+  
+  if [ -z "$(get_env_value N8N_BASIC_AUTH_PASSWORD)" ]; then
+    local n8n_password
+    n8n_password=$(openssl rand -hex 18)
+    set_env_value N8N_BASIC_AUTH_PASSWORD "$n8n_password" enforce
+    log_info "Mot de passe n8n généré"
+  fi
+  
+  # Génération de la clé API Bearer pour n8n
+  if [ -z "$(get_env_value N8N_SECURITY_API_BEARER_AUTH)" ]; then
+    local n8n_bearer_auth
+    n8n_bearer_auth=$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 48)
+    set_env_value N8N_SECURITY_API_BEARER_AUTH "$n8n_bearer_auth" enforce
+    log_info "Clé API Bearer n8n générée"
   fi
   
   # Configuration des paramètres par défaut
