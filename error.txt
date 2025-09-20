@@ -33,3 +33,47 @@
 - **Services principaux** : ✅ Tous opérationnels
 - **Langfuse** : ❌ Problèmes de configuration persistants malgré les corrections
 - **Recommandation** : Utiliser la stack sans Langfuse pour le développement initial
+
+---
+
+# ANALYSE COMPARATIVE AVEC DOCKER-COMPOSE OFFICIEL - 20/09/2025 15:15
+
+## Problèmes majeurs identifiés
+
+### 1. Configuration Redis incorrecte
+**Problème** : Notre configuration différait de l'officiel
+**Corrections appliquées** :
+- ❌ `redis-server --requirepass` → ✅ `--requirepass` (comme l'officiel)
+- ❌ `REDIS_PASSWORD` → ✅ `REDIS_AUTH` (comme l'officiel)
+- ❌ Healthcheck avec `-a ${REDIS_AUTH}` → ✅ `redis-cli ping` (comme l'officiel)
+
+### 2. Variables ClickHouse supprimées par erreur
+**Problème** : Nous avions supprimé les variables ClickHouse
+**Corrections appliquées** :
+- ✅ Remise des variables ClickHouse officielles
+- ✅ Remise des dépendances ClickHouse
+- ✅ Suppression des variables de désactivation
+
+### 3. Variables S3 incorrectes
+**Problème** : Nous utilisions des variables S3 simplifiées
+**Corrections appliquées** :
+- ❌ `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, etc. → ✅ Variables officielles `LANGFUSE_S3_*`
+
+### 4. Variables de base manquantes
+**Corrections appliquées** :
+- ✅ Ajout de `NEXTAUTH_URL: http://localhost:3000`
+
+## Configuration finale alignée sur l'officiel
+- **Redis** : Configuration identique à l'officiel
+- **ClickHouse** : Variables et dépendances restaurées
+- **S3** : Variables officielles `LANGFUSE_S3_*`
+- **Base** : `NEXTAUTH_URL` ajouté
+
+## Tests après corrections
+- **Langfuse-worker** : ❌ Erreurs Redis persistantes
+- **Langfuse-web** : ❌ Invalid environment variables persistantes
+
+## Prochaines étapes
+1. Investiguer pourquoi les erreurs Redis persistent malgré la configuration officielle
+2. Vérifier les variables d'environnement dans le conteneur
+3. Tester la connectivité Redis depuis l'intérieur du conteneur
