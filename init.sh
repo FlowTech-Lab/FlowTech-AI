@@ -1,400 +1,741 @@
 #!/bin/bash
 set -euo pipefail
 
-# ---- logging complet ----
-mkdir -p logs
-LOGFILE="logs/init-$(date +%Y%m%d-%H%M%S).log"
+# =============================================================================
+# FlowTech-AI Initialization Script - Optimized Version
+# =============================================================================
+# Script d'initialisation optimisé qui utilise les fichiers existants
+# Suit les principes DRY, KISS, YAGNI et les conventions du projet
+# =============================================================================
+
+# ---- Configuration du logging ----
+readonly LOG_DIR="logs"
+readonly LOGFILE="${LOG_DIR}/init-$(date +%Y%m%d-%H%M%S).log"
+readonly SCRIPT_START_TIME=$(date -Is)
+
+# Création du répertoire de logs
+mkdir -p "$LOG_DIR"
+
+# Initialisation du logging complet
 {
-  echo "===== FlowTech-AI init $(date -Is) ====="
+  echo "===== FlowTech-AI init $SCRIPT_START_TIME ====="
   echo "PWD: $(pwd)"
   echo "User: $(id -u):$(id -g)"
-} >>"$LOGFILE"
+} >> "$LOGFILE"
 
+# Redirection de la sortie vers le fichier de log
 exec > >(stdbuf -oL tee -a "$LOGFILE") 2>&1
 
+# Mode debug si activé
 if [ "${INIT_DEBUG:-0}" = "1" ]; then
-  exec 9>>"$LOGFILE"
+  exec 9>> "$LOGFILE"
   BASH_XTRACEFD=9
   set -x
 fi
 
-trap 'ec=$?; echo; echo "[INFO ] init finished with exit code: $ec"; echo "Full log: $LOGFILE"; exit $ec' EXIT
+# Trap pour la sortie propre
+trap 'handle_exit $?' EXIT
 
-# -------- Helpers -----------------------------------------------------------
-need() {
-  command -v "$1" >/dev/null 2>&1 || {
-    printf '[ERROR] Missing dependency: %s\n' "$1" >&2
-    exit 1
-  }
+# =============================================================================
+# Variables globales et constantes
+# =============================================================================
+readonly BOLD="\033[1m"
+readonly RESET="\033[0m"
+readonly GREEN="\033[32m"
+readonly YELLOW="\033[33m"
+readonly BLUE="\033[36m"
+readonly RED="\033[31m"
+
+readonly TOTAL_STEPS=10
+readonly AI_DATA_DIR="./AI_Data"
+readonly ENV_FILE=".env"
+readonly MIN_FREE_SPACE_KB=2097152  # 2GB en KB
+
+# =============================================================================
+# OPTION DE DÉVELOPPEMENT - MODIFIER ICI POUR LE RESET COMPLET
+# =============================================================================
+readonly DEV_MODE=true  # true = supprime .env, AI_Data et logs (DEV ONLY!)
+# =============================================================================
+
+# =============================================================================
+# CONFIGURATION DES TIMEOUTS
+# =============================================================================
+readonly DISK_CHECK_TIMEOUT=30
+readonly DOCKER_PULL_TIMEOUT=600  # 10 minutes pour télécharger toutes les images
+readonly SERVICE_START_TIMEOUT=120  # 2 minutes pour démarrer les services
+readonly HEALTH_CHECK_TIMEOUT=180  # 3 minutes pour les health checks
+# =============================================================================
+
+# Compteur d'étapes
+STEP=0
+
+# =============================================================================
+# Fonctions utilitaires optimisées
+# =============================================================================
+
+# Vérification de l'espace disque disponible
+check_disk_space() {
+  log_info "Vérification de l'espace disque disponible..."
+  
+  local available_space_kb
+  available_space_kb=$(df . | awk 'NR==2 {print $4}')
+  
+  if [ "$available_space_kb" -lt "$MIN_FREE_SPACE_KB" ]; then
+    log_error "Espace disque insuffisant !"
+    log_error "Espace disponible: $((available_space_kb / 1024 / 1024))GB"
+    log_error "Espace requis: $((MIN_FREE_SPACE_KB / 1024 / 1024))GB"
+    log_error "Libérez de l'espace disque avant de continuer."
+    return 1
+  fi
+  
+  log_success "Espace disque OK: $((available_space_kb / 1024 / 1024))GB disponible"
+  return 0
 }
 
-getenv_value() {
-  grep -E "^$1=" .env 2>/dev/null | tail -n1 | cut -d= -f2-
-}
-
-enforce_env() {
-  local key="$1" value="$2"
-  if grep -qE "^${key}=" .env 2>/dev/null; then
-    sed -i "s|^${key}=.*|${key}=${value}|" .env
+# Téléchargement des images Docker
+pull_docker_images() {
+  log_info "Téléchargement des images Docker (timeout: ${DOCKER_PULL_TIMEOUT}s)..."
+  
+  if run_with_timeout "$DOCKER_PULL_TIMEOUT" "docker compose pull"; then
+    log_success "Images Docker téléchargées avec succès"
+    return 0
   else
-    echo "${key}=${value}" >> .env
+    log_error "Échec du téléchargement des images Docker"
+    return 1
   fi
 }
 
-ensure_env() {
-  local key="$1" value="$2"
-  grep -qE "^${key}=" .env 2>/dev/null || echo "${key}=${value}" >> .env
+# Gestion de la sortie du script
+handle_exit() {
+  local exit_code=$1
+  local end_time=$(date -Is)
+  local duration=$(($(date +%s) - $(date -d "$SCRIPT_START_TIME" +%s)))
+  
+  echo
+  echo "[INFO ] Script terminé avec le code de sortie: $exit_code"
+  echo "[INFO ] Durée d'exécution: ${duration}s"
+  echo "[INFO ] Log complet: $LOGFILE"
+  
+  if [ $exit_code -eq 0 ]; then
+    log_ok "Initialisation FlowTech-AI terminée avec succès"
+  else
+    log_error "Initialisation échouée (code: $exit_code)"
+  fi
+  
+  exit $exit_code
 }
 
-putenv_if_missing() {
-  local key="$1" value="$2"
-  grep -qE "^${key}=" .env 2>/dev/null || echo "${key}=${value}" >> .env
+# Vérification des dépendances
+check_dependency() {
+  local cmd="$1"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    log_error "Dépendance manquante: $cmd"
+    exit 1
+  fi
+  log_ok "$cmd disponible"
 }
 
-wait_for_service() {
-  local service="$1"
-  local command="$2"
-  local timeout="${3:-60}"
-  log_info "Waiting for ${service} to be ready (timeout: ${timeout}s)"
-  for i in $(seq 1 "$timeout"); do
-    if eval "$command" >/dev/null 2>&1; then
-      log_ok "${service} is ready"
+# Gestion des variables d'environnement optimisée
+get_env_value() {
+  local key="$1"
+  grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d= -f2- || echo ""
+}
+
+set_env_value() {
+  local key="$1" value="$2" mode="${3:-ensure}"
+  
+  case "$mode" in
+    "enforce")
+      if grep -qE "^${key}=" "$ENV_FILE" 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+      else
+        echo "${key}=${value}" >> "$ENV_FILE"
+      fi
+      ;;
+    "ensure")
+      grep -qE "^${key}=" "$ENV_FILE" 2>/dev/null || echo "${key}=${value}" >> "$ENV_FILE"
+      ;;
+  esac
+}
+
+# Configuration en lot des variables d'environnement
+bulk_set_env() {
+  local mode="$1"
+  shift
+  
+  for kv in "$@"; do
+    local key="${kv%%=*}"
+    local value="${kv#*=}"
+    set_env_value "$key" "$value" "$mode"
+  done
+}
+
+# Encodage URL optimisé
+
+# Attente HTTP avec timeout et retry
+wait_for_http() {
+  local url="$1"
+  local timeout="${2:-60}"
+  local interval="${3:-2}"
+  local elapsed=0
+  
+  log_info "Attente de la disponibilité de $url (timeout: ${timeout}s)"
+  
+  while [ $elapsed -lt $timeout ]; do
+    if curl -fsS -m 3 "$url" >/dev/null 2>&1; then
+      log_ok "Service disponible: $url"
       return 0
     fi
-    sleep 1
+    
+    sleep $interval
+    elapsed=$((elapsed + interval))
+    printf "."
   done
-  log_warn "${service} not ready after ${timeout}s"
+  
+  echo
+  log_warn "Timeout atteint pour $url"
   return 1
 }
 
-run() {
-  local secs="${1:-20}"; shift
+# Fonctions de logging colorées
+log_info() { printf "${BLUE}[INFO ]${RESET} %s\n" "$*"; }
+log_ok()   { printf "${GREEN}[ OK  ]${RESET} %s\n" "$*"; }
+log_warn() { printf "${YELLOW}[WARN ]${RESET} %s\n" "$*"; }
+log_error() { printf "${RED}[ERROR]${RESET} %s\n" "$*"; }
+
+# Exécution de commandes avec timeout et logging
+run_with_timeout() {
+  local timeout="${1:-20}"
+  shift
   local cmd="$*"
-  log_info "RUN (timeout ${secs}s): $cmd"
-  if timeout "${secs}" bash -lc "$cmd"; then
-    log_ok "DONE: $cmd"
+  
+  log_info "Exécution (timeout ${timeout}s): $cmd"
+  
+  if timeout "$timeout" bash -lc "$cmd"; then
+    log_ok "Commande réussie: $cmd"
+    return 0
   else
     local rc=$?
-    log_warn "FAILED/timeout rc=$rc: $cmd"
+    log_warn "Commande échouée/timeout (rc=$rc): $cmd"
     return $rc
   fi
 }
 
-# -------- Styling ----------------------------------------------------------
-BOLD="\033[1m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-CYAN="\033[36m"
-RESET="\033[0m"
-
-log_info() { printf "%b[INFO ]%b %s\n" "$CYAN" "$RESET" "$*"; }
-log_ok()   { printf "%b[ OK  ]%b %s\n" "$GREEN" "$RESET" "$*"; }
-log_warn() { printf "%b[WARN ]%b %s\n" "$YELLOW" "$RESET" "$*"; }
-
-TOTAL_STEPS=9
-STEP=0
+# Affichage des étapes
 next_step() {
   STEP=$((STEP + 1))
-  printf "\n%b>>> Step %d/%d:%b %s\n" "$BOLD" "$STEP" "$TOTAL_STEPS" "$RESET" "$*"
+  printf "\n${BOLD}>>> Étape %d/%d:${RESET} %s\n" "$STEP" "$TOTAL_STEPS" "$*"
 }
 
-log_info "Starting FlowTech-AI bootstrap"
+# Vérification de l'espace disque
+check_disk_space() {
+  local available_space
+  available_space=$(df -Pk . | tail -1 | awk '{print $4}')
+  
+  if [ "${available_space:-0}" -lt $MIN_FREE_SPACE_KB ]; then
+    log_warn "Espace disque insuffisant: ${available_space}KB disponibles"
+    log_warn "Recommandé: au moins 5GB (2GB minimum)"
+    return 1
+  fi
+  
+  log_ok "Espace disque suffisant: ${available_space}KB disponibles"
+  return 0
+}
 
-# Step 1: prerequisites
-next_step "Validating prerequisites"
-need openssl && log_ok "openssl available"
-need curl    && log_ok "curl available"
-need docker  && log_ok "docker available"
-if docker compose version >/dev/null 2>&1; then
-  log_ok "docker compose plugin detected"
-else
-  printf '[ERROR] docker compose plugin is required\n' >&2
-  exit 1
-fi
+# Gestion des permissions optimisée
+set_secure_permissions() {
+  local dir="$1"
+  local dir_mode="${2:-700}"
+  local file_mode="${3:-600}"
+  
+  if [ -d "$dir" ]; then
+    find "$dir" -type d -exec chmod "$dir_mode" {} + 2>/dev/null || true
+    find "$dir" -type f -exec chmod "$file_mode" {} + 2>/dev/null || true
+    log_ok "Permissions sécurisées appliquées à $dir"
+  fi
+}
 
+# Vérification et création des fichiers requis
+ensure_required_files() {
+  log_info "Vérification des fichiers requis"
+  
+  # Vérifier que les fichiers existent et sont exécutables
+  if [ ! -f "wait-for-it.sh" ] || [ ! -x "wait-for-it.sh" ]; then
+    log_error "Fichier wait-for-it.sh manquant ou non exécutable"
+    log_info "Veuillez créer ce fichier avant de continuer"
+    exit 1
+  fi
+  
+  if [ ! -f "langfuse-entrypoint.sh" ] || [ ! -x "langfuse-entrypoint.sh" ]; then
+    log_error "Fichier langfuse-entrypoint.sh manquant ou non exécutable"
+    log_info "Veuillez créer ce fichier avant de continuer"
+    exit 1
+  fi
+  
+  log_ok "Fichiers requis présents et exécutables"
+}
+
+
+# Correction du docker-compose.yml pour supprimer les volumes problématiques
+fix_docker_compose() {
+  log_info "Correction du fichier docker-compose.yml"
+  
+  # Sauvegarder le fichier original
+  cp docker-compose.yml docker-compose.yml.backup 2>/dev/null || true
+  
+  # Supprimer les volumes problématiques pour langfuse-web et langfuse-worker
+  sed -i '/- \.\/wait-for-it.sh:\/wait-for-it.sh:ro/d' docker-compose.yml
+  sed -i '/- \.\/langfuse-entrypoint.sh:\/langfuse-entrypoint.sh:ro/d' docker-compose.yml
+  
+  # Supprimer les entrypoints personnalisés
+  sed -i '/entrypoint: \["\/langfuse-entrypoint.sh"\]/d' docker-compose.yml
+  
+  log_ok "Fichier docker-compose.yml corrigé (volumes et entrypoints supprimés)"
+}
+
+
+# Nettoyage des conteneurs (avec option de suppression des données)
+cleanup_containers() {
+  log_info "Nettoyage des conteneurs"
+  
+  # Arrêter et supprimer tous les conteneurs du projet
+  docker compose down --remove-orphans --volumes 2>/dev/null || true
+  
+  # Nettoyer les images non utilisées seulement
+  docker system prune -f 2>/dev/null || true
+  
+  # Suppression conditionnelle (DEV ONLY!)
+  if [ "$DEV_MODE" = "true" ]; then
+    log_warn "⚠️  MODE DÉVELOPPEMENT: Suppression complète activée"
+    
+    # Supprimer complètement le répertoire AI_Data
+    if [ -d "$AI_DATA_DIR" ]; then
+      log_info "Suppression du répertoire AI_Data"
+      sudo rm -rf "$AI_DATA_DIR" 2>/dev/null || rm -rf "$AI_DATA_DIR"
+      log_ok "Répertoire AI_Data supprimé"
+    fi
+    
+    # Supprimer le fichier .env
+    if [ -f "$ENV_FILE" ]; then
+      log_info "Suppression du fichier .env"
+      rm -f "$ENV_FILE"
+      log_ok "Fichier .env supprimé"
+    fi
+    
+    # Supprimer les logs
+    if [ -d "$LOG_DIR" ]; then
+      log_info "Suppression du répertoire logs"
+      rm -rf "$LOG_DIR"
+      log_ok "Répertoire logs supprimé"
+    fi
+    
+    # Nettoyer complètement le système Docker (sans supprimer les images)
+    docker system prune -f --volumes 2>/dev/null || true
+    
+    log_ok "Nettoyage complet terminé (MODE DEV)"
+  else
+    log_info "Nettoyage standard (données préservées)"
+    log_ok "Nettoyage terminé"
+  fi
+}
+
+
+# Affichage du résumé final
+show_final_summary() {
+  log_ok "🎉 FlowTech-AI est maintenant opérationnel !"
+  echo
+  log_info "📋 Résumé des services disponibles :"
+  echo
+  echo "  🌐 Langfuse (Monitoring AI):     http://localhost:$(get_env_value LANGFUSE_PORT)"
+  echo "  🤖 OpenWebUI (Interface AI):     http://localhost:$(get_env_value OPENWEBUI_PORT)"
+  echo "  🔍 SearxNG (Moteur de recherche): http://localhost:$(get_env_value SEARXNG_PORT)"
+  echo "  ⚡ N8N (Automatisation):         http://localhost:$(get_env_value N8N_PORT)"
+  echo "  🗄️  Qdrant (Base vectorielle):    http://localhost:6333"
+  echo "  📊 ClickHouse (Analytics):       http://localhost:8123"
+  echo
+  log_info "🔑 Identifiants par défaut :"
+  echo "  • Langfuse: admin@local / $(get_env_value LANGFUSE_INIT_USER_PASSWORD)"
+  echo "  • N8N: Utilisez l'authentification de base configurée"
+  echo
+  log_info "📁 Fichiers importants :"
+  echo "  • Configuration: .env"
+  echo "  • Logs: $LOGFILE"
+  echo "  • Données: ./AI_Data/"
+  echo
+  log_info "🛠️  Commandes utiles :"
+  echo "  • Voir les logs: docker compose logs -f [service]"
+  echo "  • Redémarrer: docker compose restart [service]"
+  echo "  • Arrêter tout: docker compose down"
+  echo "  • Voir l'état: docker compose ps"
+  echo
+}
+
+# Affichage des options de développement
+show_dev_options() {
+  log_info "Mode développement activé:"
+  echo "  DEV_MODE=true dans le script = Reset complet (.env, AI_Data, logs)"
+  echo ""
+}
+
+# =============================================================================
+# Fonction principale
+# =============================================================================
+main() {
+  # Vérification des arguments d'aide
+  if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+    echo "FlowTech-AI Initialization Script"
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "Option de développement:"
+    echo "  Modifier DEV_MODE=true dans le script pour reset complet"
+    echo "  (supprime .env, AI_Data et logs)"
+    echo ""
+    exit 0
+  fi
+  
+  log_info "Démarrage de l'initialisation FlowTech-AI"
+  
+  # Affichage du mode développement si activé
+  if [ "$DEV_MODE" = "true" ]; then
+    show_dev_options
+  fi
+  
+  # Étape 1: Vérification des prérequis
+  next_step "Validation des prérequis"
+  check_dependency "openssl"
+  check_dependency "curl"
+  check_dependency "docker"
+  
+  if ! docker compose version >/dev/null 2>&1; then
+    log_error "Plugin docker compose requis"
+    exit 1
+  fi
+  log_ok "Plugin docker compose détecté"
+  
+  # Étape 1.5: Vérification de l'espace disque
+  next_step "Vérification de l'espace disque"
+  if ! check_disk_space; then
+    exit 1
+  fi
+  
+  # Vérification des fichiers requis
+  ensure_required_files
+  
+  # Correction du docker-compose.yml
+  fix_docker_compose
+  
+  # Configuration des permissions
 umask 077
-log_info "Ensuring .env exists"
-touch .env
-
-if ! docker info >/dev/null 2>&1; then
-  log_warn "Current user cannot access Docker. Add to docker group and re-login:"
-  log_warn "  sudo usermod -aG docker $USER && newgrp docker"
-  exit 1
-fi
-
-if [ "${INIT_PULL:-yes}" != "no" ]; then
-  log_info "Pulling latest container images (set INIT_PULL=no to skip)"
-  docker compose pull
-fi
-
-# Step 2: directories & permissions
-next_step "Preparing data directories"
-uid="$(id -u)"
-gid="$(id -g)"
-
-# Application data directories (exclude pgdata which is owned by postgres)
-mkdir -p ./AI_Data/{openwebui,n8n,searxng,qdrant,clickhouse}
-chown -R "$uid:$gid" ./AI_Data/{openwebui,n8n,searxng,qdrant,clickhouse} 2>/dev/null || true
-find ./AI_Data/{openwebui,n8n,qdrant,clickhouse} -type d -exec chmod 700 {} + 2>/dev/null || true
-find ./AI_Data/{openwebui,n8n,qdrant,clickhouse} -type f -exec chmod 600 {} + 2>/dev/null || true
-# SearxNG must stay readable by the container entrypoint
-find ./AI_Data/searxng -type d -exec chmod 755 {} + 2>/dev/null || true
-find ./AI_Data/searxng -type f -exec chmod 644 {} + 2>/dev/null || true
-
-# PostgreSQL init scripts directory – readable by postgres (UID 70)
-INIT_DIR="./AI_Data/postgres-init"
-mkdir -p "$INIT_DIR"
-if command -v sudo >/dev/null 2>&1; then
-  sudo chown root:root "$INIT_DIR" || true
-  sudo chmod 755 "$INIT_DIR" || true
-  sudo find "$INIT_DIR" -type f -name '*.sh' -exec chmod 755 {} \; || true
-  sudo find "$INIT_DIR" -type f -name '*.sql*' -exec chmod 644 {} \; || true
-  sudo chown -R root:root "$INIT_DIR" || true
-else
-  log_warn "sudo not available: ensure init scripts are readable by Postgres"
-  chmod 755 "$INIT_DIR" 2>/dev/null || true
-  find "$INIT_DIR" -type f -name '*.sh' -exec chmod 755 {} \; >/dev/null 2>&1 || true
-  find "$INIT_DIR" -type f -name '*.sql*' -exec chmod 644 {} \; >/dev/null 2>&1 || true
-fi
-
-# PostgreSQL data directory – let postgres own files on first start
-PGDATA_DIR="./AI_Data/pgdata"
-mkdir -p "$PGDATA_DIR"
-chmod 700 "$PGDATA_DIR" 2>/dev/null || true
-
-# Seed init script for PostgreSQL (executed only on first cluster init)
-INIT_SQL="$INIT_DIR/01-create-langfuse.sql"
-if [ ! -f "$INIT_SQL" ]; then
-  log_info "Writing PostgreSQL init script for langfuse database"
-  TMP="$(mktemp)"
-  cat > "$TMP" <<'EOSQL'
+  log_info "Création du fichier .env"
+  touch "$ENV_FILE"
+  
+  # Vérification des permissions Docker
+  if ! docker info >/dev/null 2>&1; then
+    log_error "Permissions Docker insuffisantes"
+    log_info "Ajoutez votre utilisateur au groupe docker:"
+    log_info "sudo usermod -aG docker $USER && newgrp docker"
+    exit 1
+  fi
+  
+  # Nettoyage des conteneurs existants
+  cleanup_containers
+  
+  # Étape 2.5: Téléchargement des images Docker
+  next_step "Téléchargement des images Docker"
+  if ! pull_docker_images; then
+    exit 1
+  fi
+  
+  # Étape 2: Préparation des répertoires
+  next_step "Préparation des répertoires de données"
+  local uid gid
+  uid=$(id -u)
+  gid=$(id -g)
+  
+  # Création des répertoires avec structure optimisée
+  local dirs=("openwebui" "n8n" "searxng" "qdrant" "clickhouse" "clickhouse-logs" "minio" "pgdata" "postgres-init")
+  for dir in "${dirs[@]}"; do
+    mkdir -p "${AI_DATA_DIR}/$dir"
+  done
+  
+  # Application des permissions sécurisées
+for dir in openwebui n8n qdrant pgdata; do
+    set_secure_permissions "${AI_DATA_DIR}/$dir" 700 600
+  done
+  
+  # Permissions spéciales pour ClickHouse (utilisateur 101:101)
+  sudo chown -R 101:101 "${AI_DATA_DIR}/clickhouse" "${AI_DATA_DIR}/clickhouse-logs" 2>/dev/null || true
+  sudo chmod -R 755 "${AI_DATA_DIR}/clickhouse" "${AI_DATA_DIR}/clickhouse-logs" 2>/dev/null || true
+  log_info "Permissions ClickHouse configurées (utilisateur 101:101)"
+  
+  # Permissions spéciales pour MinIO (utilisateur 1000:1000)
+  sudo chown -R 1000:1000 "${AI_DATA_DIR}/minio" 2>/dev/null || true
+  sudo chmod -R 755 "${AI_DATA_DIR}/minio" 2>/dev/null || true
+  log_info "Permissions MinIO configurées (utilisateur 1000:1000)"
+  
+  # Permissions spéciales pour SearxNG
+  set_secure_permissions "${AI_DATA_DIR}/searxng" 755 644
+  
+  # Permissions PostgreSQL
+  chmod 755 "${AI_DATA_DIR}/postgres-init" 2>/dev/null || true
+  chmod 700 "${AI_DATA_DIR}/pgdata" 2>/dev/null || true
+  
+  # Script d'initialisation PostgreSQL
+  local init_sql="${AI_DATA_DIR}/postgres-init/01-create-langfuse.sql"
+  if [ ! -f "$init_sql" ]; then
+    log_info "Création du script d'initialisation PostgreSQL"
+    cat > "$init_sql" <<'EOSQL'
 SELECT 'CREATE DATABASE langfuse'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'langfuse')\gexec
 EOSQL
-  if command -v sudo >/dev/null 2>&1; then
-    sudo install -o root -g root -m 0644 "$TMP" "$INIT_SQL"
-    sudo chown root:root "$INIT_DIR"
-    sudo chmod 755 "$INIT_DIR"
-  else
-    mv "$TMP" "$INIT_SQL"
-    chmod 644 "$INIT_SQL"
-    chmod 755 "$INIT_DIR"
-  fi
-  rm -f "$TMP"
+    chmod 644 "$init_sql"
 fi
+  
+  log_ok "Répertoires AI_Data préparés avec permissions sécurisées"
 
-log_ok "AI_Data folders ready with secure permissions"
+  # Vérification de l'espace disque
+  check_disk_space || log_warn "Continuez avec prudence - espace disque limité"
 
-available_space=$(df -Pk . | tail -1 | awk '{print $4}')
-if [ "${available_space:-0}" -lt 2097152 ]; then
-  log_warn "Less than 2GB of free disk space detected; at least 5GB is recommended"
-fi
-
-# Step 3: SearxNG configuration
-next_step "Syncing SearxNG configuration"
+  # Étape 3: Configuration SearxNG
+  next_step "Synchronisation de la configuration SearxNG"
 mkdir -p searxng
-if [ -f settings.yml ] && [ ! -f searxng/settings.yml ]; then
-  cp settings.yml searxng/settings.yml
-  log_info "Copied settings.yml into searxng/"
-fi
-for f in searxng/settings.yml searxng/limiter.toml; do
-  [ -f "$f" ] && chmod 644 "$f"
-done
+  
+  # Copie des fichiers de configuration
+  if [ -f settings.yml ] && [ ! -f searxng/settings.yml ]; then
+    cp settings.yml searxng/settings.yml
+    log_info "settings.yml copié dans searxng/"
+  fi
+  
+  # Application des permissions aux fichiers de configuration
+  for f in searxng/settings.yml searxng/limiter.toml; do
+    [ -f "$f" ] && chmod 644 "$f"
+  done
+  
+  # Copie vers AI_Data
 if [ -d searxng ]; then
-  mkdir -p AI_Data/searxng
-  cp -a searxng/. AI_Data/searxng/
-  chown -R "$uid:$gid" AI_Data/searxng 2>/dev/null || true
-  find AI_Data/searxng -type d -exec chmod 755 {} +
-  find AI_Data/searxng -type f -exec chmod 644 {} +
-fi
-log_ok "SearxNG templates copied into AI_Data/searxng"
-
-# Step 4: base environment defaults
-next_step "Seeding base environment variables"
-ensure_env OLLAMA_BASE_URL "http://192.168.0.2:11434"
-ensure_env OPENWEBUI_PORT "8081"
-ensure_env SEARXNG_PORT "8082"
-ensure_env N8N_PORT "5678"
-ensure_env POSTGRES_USER "n8n"
-ensure_env POSTGRES_DB "n8n"
-if ! grep -qE '^POSTGRES_PASSWORD=' .env 2>/dev/null; then
-  enforce_env POSTGRES_PASSWORD "$(openssl rand -base64 24)"
-  log_info "Generated POSTGRES_PASSWORD"
-fi
-ensure_env LANGFUSE_PORT "3300"
-ensure_env LANGFUSE_EXTERNAL_URL "http://localhost:3300"
-enforce_env LANGFUSE_HOST "http://langfuse:3000"
-ensure_env LANGFUSE_TRACING_ENVIRONMENT "dev"
-ensure_env LANGFUSE_INIT_PROJECT_RETENTION "30"
-ensure_env TZ "Europe/Paris"
-log_ok "Core environment variables present"
-
-# Step 5: Langfuse core secrets & DB URL
-next_step "Configuring Langfuse credentials"
-if ! grep -qE '^LANGFUSE_NEXTAUTH_SECRET=' .env 2>/dev/null; then
-  enforce_env LANGFUSE_NEXTAUTH_SECRET "$(openssl rand -hex 32)"
-  log_info "Generated LANGFUSE_NEXTAUTH_SECRET"
-fi
-if ! grep -qE '^LANGFUSE_SALT=' .env 2>/dev/null; then
-  enforce_env LANGFUSE_SALT "$(openssl rand -hex 16)"
-  log_info "Generated LANGFUSE_SALT"
-fi
-if ! grep -qE '^LANGFUSE_ENCRYPTION_KEY=' .env 2>/dev/null; then
-  enforce_env LANGFUSE_ENCRYPTION_KEY "$(openssl rand -hex 32)"
-  log_info "Generated LANGFUSE_ENCRYPTION_KEY"
-fi
-ensure_env LANGFUSE_PUBLIC_KEY ""
-ensure_env LANGFUSE_SECRET_KEY ""
-if ! grep -qE '^LANGFUSE_DATABASE_URL=' .env 2>/dev/null; then
-  if command -v python3 >/dev/null 2>&1; then
-    export __LF_USER="$(grep -E '^POSTGRES_USER=' .env | tail -n1 | cut -d= -f2)"
-    export __LF_PASS="$(grep -E '^POSTGRES_PASSWORD=' .env | tail -n1 | cut -d= -f2)"
-    LANGFUSE_DATABASE_URL=$(python3 - <<'PY'
-import os, urllib.parse
-user = os.environ.get("__LF_USER", "n8n") or "n8n"
-password = os.environ.get("__LF_PASS", "")
-encoded = urllib.parse.quote(password, safe="")
-print(f"postgresql://{user}:{encoded}@postgres:5432/langfuse")
-PY
-    )
-    unset __LF_USER __LF_PASS
-    enforce_env LANGFUSE_DATABASE_URL "${LANGFUSE_DATABASE_URL}"
-    log_ok "LANGFUSE_DATABASE_URL generated"
+    mkdir -p "${AI_DATA_DIR}/searxng"
+    cp -a searxng/. "${AI_DATA_DIR}/searxng/"
+    chown -R "$uid:$gid" "${AI_DATA_DIR}/searxng" 2>/dev/null || true
+    set_secure_permissions "${AI_DATA_DIR}/searxng" 755 644
+  fi
+  
+  log_ok "Templates SearxNG copiés"
+  
+  # Étape 4: Variables d'environnement de base
+  next_step "Configuration des variables d'environnement de base"
+  bulk_set_env ensure \
+  OLLAMA_BASE_URL="http://192.168.0.2:11434" \
+  OPENWEBUI_PORT="8081" \
+  SEARXNG_PORT="8082" \
+  N8N_PORT="5678" \
+  POSTGRES_USER="n8n" \
+  POSTGRES_DB="n8n" \
+  LANGFUSE_PORT="3300" \
+  LANGFUSE_EXTERNAL_URL="http://localhost:3300" \
+  LANGFUSE_TRACING_ENVIRONMENT="dev" \
+  LANGFUSE_INIT_PROJECT_RETENTION="30" \
+  TZ="Europe/Paris"
+  
+  # Génération du mot de passe PostgreSQL
+  if [ -z "$(get_env_value POSTGRES_PASSWORD)" ]; then
+    local pg_password
+    pg_password=$(openssl rand -hex 24)
+    set_env_value POSTGRES_PASSWORD "$pg_password" enforce
+    log_info "Mot de passe PostgreSQL généré"
+  fi
+  
+  set_env_value LANGFUSE_HOST "http://langfuse:3000" enforce
+  log_ok "Variables d'environnement de base configurées"
+  
+  # Étape 5: Configuration des secrets Langfuse
+  next_step "Configuration des identifiants Langfuse"
+  
+  # Génération des secrets si nécessaire
+  local secrets=(
+    "LANGFUSE_NEXTAUTH_SECRET:$(openssl rand -hex 32)"
+    "LANGFUSE_SALT:$(openssl rand -hex 16)"
+    "LANGFUSE_ENCRYPTION_KEY:$(openssl rand -hex 32)"
+  )
+  
+  for secret in "${secrets[@]}"; do
+    local key="${secret%%:*}"
+    local value="${secret#*:}"
+    
+    if [ -z "$(get_env_value "$key")" ]; then
+      set_env_value "$key" "$value" enforce
+      log_info "Secret généré: $key"
+    fi
+  done
+  
+  bulk_set_env ensure LANGFUSE_PUBLIC_KEY="" LANGFUSE_SECRET_KEY=""
+  
+  # Configuration de l'URL de base de données Langfuse
+  local lf_db_user lf_db_pass
+  lf_db_user=$(get_env_value POSTGRES_USER)
+  [ -z "$lf_db_user" ] && lf_db_user="n8n"
+  lf_db_pass=$(get_env_value POSTGRES_PASSWORD)
+  
+  local lf_db_url="postgresql://${lf_db_user}:${lf_db_pass}@postgres:5432/langfuse"
+  set_env_value LANGFUSE_DATABASE_URL "$lf_db_url" enforce
+  
+  log_ok "URL de base de données Langfuse configurée"
+  
+  # Étape 6: Configuration par défaut Langfuse headless
+  next_step "Préparation des paramètres par défaut Langfuse headless"
+  
+  local org_id="${LANGFUSE_INIT_ORG_ID:-FlowTech-LAB}"
+  local proj_id="${LANGFUSE_INIT_PROJECT_ID:-default}"
+  local user_mail="${LANGFUSE_INIT_USER_EMAIL:-admin@local}"
+  local user_name="${LANGFUSE_INIT_USER_NAME:-Admin}"
+  
+  # Génération des clés API si nécessaire
+  if [ -z "$(get_env_value LANGFUSE_INIT_USER_PASSWORD)" ]; then
+    local user_password
+    user_password=$(openssl rand -hex 18)
+    set_env_value LANGFUSE_INIT_USER_PASSWORD "$user_password" enforce
+    log_info "Mot de passe utilisateur Langfuse généré"
+  fi
+  
+  if [ -z "$(get_env_value LANGFUSE_INIT_PROJECT_PUBLIC_KEY)" ]; then
+    local public_key
+    public_key="lf_pk_$(openssl rand -hex 24)"
+    set_env_value LANGFUSE_INIT_PROJECT_PUBLIC_KEY "$public_key" enforce
+    log_info "Clé API publique Langfuse générée"
+  fi
+  
+  if [ -z "$(get_env_value LANGFUSE_INIT_PROJECT_SECRET_KEY)" ]; then
+    local secret_key
+    secret_key="lf_sk_$(openssl rand -hex 32)"
+    set_env_value LANGFUSE_INIT_PROJECT_SECRET_KEY "$secret_key" enforce
+    log_info "Clé API secrète Langfuse générée"
+  fi
+  
+  # Configuration des paramètres par défaut
+  bulk_set_env ensure \
+    LANGFUSE_INIT_ORG_ID="$org_id" \
+    LANGFUSE_INIT_ORG_NAME="FlowTech-LAB" \
+    LANGFUSE_INIT_PROJECT_ID="$proj_id" \
+    LANGFUSE_INIT_PROJECT_NAME="Default" \
+    LANGFUSE_INIT_USER_EMAIL="$user_mail" \
+    LANGFUSE_INIT_USER_NAME="$user_name" \
+    LANGFUSE_INIT_PROJECT_RETENTION="30"
+  
+  # Synchronisation des clés publiques/secrètes
+  local public_key_value secret_key_value
+  public_key_value=$(get_env_value LANGFUSE_PUBLIC_KEY)
+  secret_key_value=$(get_env_value LANGFUSE_SECRET_KEY)
+  
+  [ -z "$public_key_value" ] && set_env_value LANGFUSE_PUBLIC_KEY "$(get_env_value LANGFUSE_INIT_PROJECT_PUBLIC_KEY)" enforce
+  [ -z "$secret_key_value" ] && set_env_value LANGFUSE_SECRET_KEY "$(get_env_value LANGFUSE_INIT_PROJECT_SECRET_KEY)" enforce
+  
+  log_ok "Paramètres par défaut Langfuse headless configurés"
+  
+  # Étape 7: Configuration des services Langfuse (ClickHouse, Redis, MinIO)
+  next_step "Configuration des services Langfuse"
+  
+  # Variables ClickHouse
+  if [ -z "$(get_env_value CLICKHOUSE_PASSWORD)" ]; then
+    local ch_password
+    ch_password=$(openssl rand -hex 18)
+    set_env_value CLICKHOUSE_PASSWORD "$ch_password" enforce
+    log_info "Mot de passe ClickHouse généré"
+  fi
+  
+  # Variables Redis
+  if [ -z "$(get_env_value REDIS_AUTH)" ]; then
+    local redis_password
+    redis_password=$(openssl rand -hex 18)
+    set_env_value REDIS_AUTH "$redis_password" enforce
+    log_info "Mot de passe Redis généré"
+  fi
+  
+  # Variables MinIO
+  if [ -z "$(get_env_value MINIO_ROOT_PASSWORD)" ]; then
+    local minio_password
+    minio_password=$(openssl rand -hex 18)
+    set_env_value MINIO_ROOT_PASSWORD "$minio_password" enforce
+    log_info "Mot de passe MinIO généré"
+  fi
+  
+  log_ok "Services Langfuse configurés"
+  
+  # Étape 8: Démarrage de tous les services
+  next_step "Démarrage de tous les services"
+  
+  # En mode DEV, supprimer la base de données AVANT de démarrer Langfuse
+  if [ "$DEV_MODE" = "true" ]; then
+    log_info "Mode DEV: Démarrage de PostgreSQL seul pour nettoyer la base"
+    docker compose up -d postgres
+    
+    # Attendre PostgreSQL et supprimer la base de données
+    log_info "Attente de PostgreSQL..."
+    local count=0
+    while [ $count -lt 30 ]; do
+      if docker compose exec -T postgres pg_isready -U postgres >/dev/null 2>&1; then
+        log_ok "PostgreSQL est disponible"
+        break
+      fi
+      sleep 2
+      count=$((count + 1))
+    done
+    
+    if [ $count -lt 30 ]; then
+      log_info "Suppression de la base de données Langfuse"
+      docker compose exec -T postgres psql -U postgres -c "DROP DATABASE IF EXISTS langfuse;" 2>/dev/null || true
+      log_info "Création de la base de données Langfuse"
+      docker compose exec -T postgres psql -U postgres -c "CREATE DATABASE langfuse;" 2>/dev/null || true
+      log_ok "Base de données Langfuse réinitialisée"
+    fi
+  fi
+  
+  # Démarrage de tous les services (ordre géré par depends_on dans docker-compose.yml)
+  next_step "Démarrage de tous les services (ordre optimisé)"
+  run_with_timeout "$SERVICE_START_TIMEOUT" "docker compose up -d"
+  
+  # Attendre que tous les services soient prêts
+  log_info "Attente de la stabilisation des services (60s)..."
+  sleep 60
+  
+  # Attendre que Langfuse soit disponible
+  local lf_url
+  lf_url=$(get_env_value LANGFUSE_EXTERNAL_URL)
+  [ -z "$lf_url" ] && lf_url="http://localhost:3300"
+  
+  log_info "Attente de la disponibilité des services"
+  if wait_for_http "$lf_url" 300 5; then
+    log_ok "Langfuse est disponible à $lf_url"
   else
-    log_warn "python3 missing: please set LANGFUSE_DATABASE_URL manually if needed"
+    log_warn "Langfuse n'est pas encore disponible, mais les services sont démarrés"
   fi
-else
-  log_ok "LANGFUSE_DATABASE_URL already set"
-fi
+  
+  # Vérifications de santé rapides
+  log_info "Vérifications de santé rapides"
+  run_with_timeout 10 "docker compose ps"
+  
+  # Validation finale
+  local required_vars=(
+    "POSTGRES_PASSWORD"
+    "LANGFUSE_NEXTAUTH_SECRET"
+    "LANGFUSE_SALT"
+    "LANGFUSE_ENCRYPTION_KEY"
+  )
+  
+  for var in "${required_vars[@]}"; do
+    local value
+    value=$(get_env_value "$var")
+    if [ -z "$value" ]; then
+      log_error "Variable requise manquante: $var"
+      exit 1
+    fi
+  done
+  
+  log_ok "Toutes les variables d'environnement critiques requises sont définies"
+  
+  # Résumé final
+  show_final_summary
+}
 
-# Step 6: Langfuse headless defaults
-next_step "Preparing Langfuse headless defaults"
-ORG_ID="${LANGFUSE_INIT_ORG_ID:-FlowTech-LAB}"
-PROJ_ID="${LANGFUSE_INIT_PROJECT_ID:-default}"
-USER_MAIL="${LANGFUSE_INIT_USER_EMAIL:-admin@local}"
-USER_NAME="${LANGFUSE_INIT_USER_NAME:-Admin}"
-if ! grep -qE '^LANGFUSE_INIT_USER_PASSWORD=' .env 2>/dev/null; then
-  enforce_env LANGFUSE_INIT_USER_PASSWORD "$(openssl rand -base64 18)"
-  log_info "Generated Langfuse headless user password"
-fi
-if ! grep -qE '^LANGFUSE_INIT_PROJECT_PUBLIC_KEY=' .env 2>/dev/null; then
-  enforce_env LANGFUSE_INIT_PROJECT_PUBLIC_KEY "lf_pk_$(openssl rand -hex 24)"
-  log_info "Generated Langfuse public API key"
-fi
-if ! grep -qE '^LANGFUSE_INIT_PROJECT_SECRET_KEY=' .env 2>/dev/null; then
-  enforce_env LANGFUSE_INIT_PROJECT_SECRET_KEY "lf_sk_$(openssl rand -hex 32)"
-  log_info "Generated Langfuse secret API key"
-fi
-putenv_if_missing LANGFUSE_INIT_ORG_ID "$ORG_ID"
-putenv_if_missing LANGFUSE_INIT_ORG_NAME FlowTech-LAB
-putenv_if_missing LANGFUSE_INIT_PROJECT_ID "$PROJ_ID"
-putenv_if_missing LANGFUSE_INIT_PROJECT_NAME Default
-putenv_if_missing LANGFUSE_INIT_USER_EMAIL "$USER_MAIL"
-putenv_if_missing LANGFUSE_INIT_USER_NAME "$USER_NAME"
-putenv_if_missing LANGFUSE_INIT_PROJECT_RETENTION 30
-if [ -z "$(getenv_value LANGFUSE_PUBLIC_KEY)" ]; then
-  enforce_env LANGFUSE_PUBLIC_KEY "$(getenv_value LANGFUSE_INIT_PROJECT_PUBLIC_KEY)"
-fi
-if [ -z "$(getenv_value LANGFUSE_SECRET_KEY)" ]; then
-  enforce_env LANGFUSE_SECRET_KEY "$(getenv_value LANGFUSE_INIT_PROJECT_SECRET_KEY)"
-fi
-log_ok "Langfuse headless defaults ensured"
-
-# Step 7: ClickHouse credentials
-next_step "Generating ClickHouse credentials"
-ensure_env CLICKHOUSE_USER "langfuse"
-ensure_env CLICKHOUSE_URL "http://clickhouse:8123"
-ensure_env CLICKHOUSE_MIGRATION_URL "clickhouse://clickhouse:9000"
-ensure_env CLICKHOUSE_DB "langfuse"
-if ! grep -qE '^CLICKHOUSE_PASSWORD=' .env; then
-  enforce_env CLICKHOUSE_PASSWORD "$(openssl rand -base64 18)"
-  log_info "Generated CLICKHOUSE_PASSWORD"
-fi
-chmod 600 .env
-log_ok "CLICKHOUSE_* variables ensured"
-
-# Step 8: Provision ClickHouse and PostgreSQL
-next_step "Provisioning ClickHouse and PostgreSQL"
-log_info "Starting ClickHouse and PostgreSQL containers"
-mkdir -p logs
-START_TS="$(date -Is)"
-if docker compose up -d --wait clickhouse postgres 2>/dev/null; then
-  log_ok "Containers reported healthy via docker compose --wait"
-else
-  log_warn "docker compose --wait unsupported or failed; falling back to manual readiness checks"
-  docker compose up -d clickhouse postgres
-fi
-
-log_info "Capturing PostgreSQL init logs"
-docker compose logs --since "$START_TS" --no-color postgres | tee logs/postgres-init.log >/dev/null
-docker compose logs --since "$START_TS" --no-color clickhouse | tee logs/clickhouse-init.log >/dev/null
-
-wait_for_service "ClickHouse" "docker compose exec -T clickhouse clickhouse-client -q 'SELECT 1'" 60 || true
-wait_for_service "PostgreSQL" "docker compose exec -T postgres pg_isready -U '$(getenv_value POSTGRES_USER)'" 60 || true
-
-if docker compose exec -T clickhouse clickhouse-client -q "SELECT 1" >/dev/null 2>&1; then
-  PW="$(getenv_value CLICKHOUSE_PASSWORD)"
-  docker compose exec -T clickhouse clickhouse-client -q "CREATE DATABASE IF NOT EXISTS langfuse"
-  docker compose exec -T clickhouse clickhouse-client -q "CREATE USER IF NOT EXISTS langfuse IDENTIFIED BY '${PW}'"
-  docker compose exec -T clickhouse clickhouse-client -q "GRANT ALL ON langfuse.* TO langfuse"
-  log_ok "Langfuse schema and user configured in ClickHouse"
-else
-  log_warn "Skipping ClickHouse schema provisioning (service unavailable)"
-fi
-
-PGU="$(getenv_value POSTGRES_USER)"
-[ -z "$PGU" ] && PGU="n8n"
-if docker compose exec -T postgres psql -U "$PGU" -tc "SELECT 1 FROM pg_database WHERE datname='langfuse'" | grep -q 1; then
-  log_ok "PostgreSQL database 'langfuse' already exists"
-else
-  log_warn "PostgreSQL database 'langfuse' missing; executing init script"
-  if docker compose exec -T postgres psql -U "$PGU" -d postgres -a -e -f /docker-entrypoint-initdb.d/01-create-langfuse.sql >/dev/null 2>&1; then
-    log_ok "Init script executed"
-  else
-    log_warn "Failed to run PostgreSQL init script"
-  fi
-  if docker compose exec -T postgres psql -U "$PGU" -tc "SELECT 1 FROM pg_database WHERE datname='langfuse'" | grep -q 1; then
-    log_ok "PostgreSQL database 'langfuse' confirmed"
-  else
-    log_warn "Database 'langfuse' still missing; inspect PostgreSQL logs"
-  fi
-fi
-
-log_info "Tearing down temporary DB services"
-set +e
-
-run 10 "docker compose ps clickhouse postgres || true"
-run 15 "docker compose stop -t 5 clickhouse postgres || true"
-run 10 "docker compose ps clickhouse postgres || true"
-
-if docker ps --format '{{.Names}}' | grep -E '(clickhouse|postgres)(-[0-9]+)?$' >/dev/null; then
-  log_warn "Force killing lingering DB containers"
-  run 10 "docker compose kill clickhouse postgres || true"
-fi
-
-run 20 "docker compose rm -fsv clickhouse postgres || true"
-
-for c in clickhouse postgres; do
-  name="$(docker ps -a --format '{{.Names}}' | grep -E "${c}(-[0-9]+)?$" || true)"
-  if [ -n "$name" ]; then
-    run 10 "docker rm -f $name || true"
-  fi
-done
-
-run 10 "docker ps -a | grep -E 'clickhouse|postgres' || true"
-set -e
-
-# Step 9: final validation
-next_step "Validating environment configuration"
-required_vars="POSTGRES_PASSWORD LANGFUSE_NEXTAUTH_SECRET LANGFUSE_SALT LANGFUSE_ENCRYPTION_KEY CLICKHOUSE_PASSWORD"
-for var in $required_vars; do
-  value=$(getenv_value "$var")
-  if [ -z "$value" ]; then
-    log_warn "Missing required variable: $var"
-    exit 1
-  fi
-done
-log_ok "All required critical environment variables are set"
-
-log_ok "Environment prepared"
-log_info "Next steps: run 'docker compose up -d' then './checklog.sh' to verify the stack"
+# =============================================================================
+# Point d'entrée principal
+# =============================================================================
+main "$@"

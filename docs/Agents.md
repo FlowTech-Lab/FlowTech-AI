@@ -1,4 +1,25 @@
-Rôles des agents dans un système multi-agents n8n + Qwen3
+# Architecture Multi-Agents FlowTech-AI
+
+## Stack actuelle et priorités
+
+### Services opérationnels ✅
+- **Ollama** (hors stack) : Moteur LLM local sur 192.168.0.2:11434
+- **Qdrant** : Mémoire vectorielle centrale pour RAG et agents
+- **Postgres** : Base de données pour n8n + états des agents
+- **OpenWebUI** : Interface principale + pipelines
+- **n8n** : Orchestrateur multi-agents central
+- **SearxNG** : Recherche web pour agents
+
+### Services en cours de résolution ⚠️
+- **Langfuse 3.98.0** : Traçabilité 
+
+### Services à déployer 🔄
+- **Redis** : Cache embeddings + files d'attente n8n
+- **Loki** : Logs centralisés
+
+---
+
+## Rôles des agents dans un système multi-agents n8n + Qwen3
 1. Master Agent (Agent Central / Brain)
 Rôle principal : Coordonne et orchestre les demandes.
 

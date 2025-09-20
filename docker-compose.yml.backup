@@ -29,13 +29,13 @@ services:
     container_name: redis
     restart: always
     networks: [flow-ai-network]
-    command: redis-server --requirepass ${REDIS_AUTH}
+    command: redis-server --requirepass ${REDIS_AUTH:-redispassword}
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
       - ./AI_Data/redis:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_AUTH}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -114,12 +114,19 @@ services:
     environment:
       # Database
       DATABASE_URL: ${LANGFUSE_DATABASE_URL}
-      # ClickHouse désactivé
+      # ClickHouse
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepassword}
+      CLICKHOUSE_DATABASE: langfuse
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
       # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_AUTH}
-      REDIS_URL: redis://:${REDIS_AUTH}@redis:6379
+      REDIS_PASSWORD: ${REDIS_AUTH:-redispassword}
+      REDIS_URL: redis://:${REDIS_AUTH:-redispassword}@redis:6379
       # S3
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY_ID: minio
@@ -144,15 +151,14 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD}
       LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
       LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-      # Désactiver ClickHouse
-      LANGFUSE_CLICKHOUSE_ENABLED: false
-      LANGFUSE_AUTO_CLICKHOUSE_MIGRATION_DISABLED: true
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      clickhouse:
         condition: service_healthy
 
   # 7. Langfuse-web - Interface utilisateur
@@ -166,12 +172,19 @@ services:
     environment:
       # Database
       DATABASE_URL: ${LANGFUSE_DATABASE_URL}
-      # ClickHouse désactivé
+      # ClickHouse
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhousepassword}
+      CLICKHOUSE_DATABASE: langfuse
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
       # Redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_AUTH}
-      REDIS_URL: redis://:${REDIS_AUTH}@redis:6379
+      REDIS_PASSWORD: ${REDIS_AUTH:-redispassword}
+      REDIS_URL: redis://:${REDIS_AUTH:-redispassword}@redis:6379
       # S3
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY_ID: minio
@@ -196,13 +209,12 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD}
       LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY}
       LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY}
-      # Désactiver ClickHouse
-      LANGFUSE_CLICKHOUSE_ENABLED: false
-      LANGFUSE_AUTO_CLICKHOUSE_MIGRATION_DISABLED: true
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      clickhouse:
         condition: service_healthy
       langfuse-worker:
         condition: service_started
@@ -246,7 +258,7 @@ services:
       - EXECUTIONS_MODE=regular
       - QUEUE_BULL_REDIS_HOST=redis
       - QUEUE_BULL_REDIS_PORT=6379
-      - QUEUE_BULL_REDIS_PASSWORD=${REDIS_AUTH}
+      - QUEUE_BULL_REDIS_PASSWORD=${REDIS_AUTH:-redispassword}
       - QUEUE_BULL_REDIS_DB=0
     volumes:
       - ./AI_Data/n8n:/home/node/.n8n

@@ -163,28 +163,39 @@
 - Optimisation continue via RLHF + Langfuse (dataset d’entraînement, ajustement heuristiques).
 
 ## 8. Services & priorisation
-Les services d’expérimentation (Flowise, Neo4j, Vault, etc.) restent optionnels et ne seront activés qu’après stabilisation de Langfuse, RBAC et HMAC.
-| Priorité | Service | Usage principal |
-|----------|---------|-----------------|
-| 1 | Qdrant | Mémoire vectorielle & recherche sémantique |
-| 2 | OpenWebUI Pipelines | OCR, ingestion, agents spécialisés |
-| 3 | Whisper | Transcription audio → texte |
-| 4 | Piper | Synthèse vocale |
-| 5 | ComfyUI | Génération d’images IA locale |
-| 6 | Nextcloud | Stockage fichiers, logs, configs |
-| 7 | n8n | Orchestration workflows & multi-agents |
-| 8 | Postgres | Persistance n8n + états agents |
-| 9 | Redis | Cache & files d’attente simples |
-| 10 | Prometheus + Grafana | Monitoring & alerting |
-| 11 | Langfuse | Traçage prompts, métriques, visualisation |
-| 12 | Traefik / NGINX | Reverse proxy, TLS automatique (option Zero Trust) |
-| 13 | Vault | Gestion centralisée des secrets (évolution) |
-| 14 | Supabase | Backend Postgres managé + Auth + Vector store |
-| 15 | Neo4j | Graphe de connaissances |
-| 16 | Flowise | Éditeur low-code de pipelines RAG |
-| 17 | Tesseract.js (via n8n) | OCR (docs techniques, schémas) |
-| 18 | Nodes de scraping (Apify, …) | Collecte auto de docs techniques |
-| 19 | RabbitMQ / Kafka | Orchestration robuste & files d’attente |
+
+### Stack recommandée et priorisée
+
+#### Phase 1 - Core Stack (Déploiement immédiat)
+| Priorité | Service | Justification | Status |
+|----------|---------|---------------|--------|
+| 1 | **Ollama** (hors stack) | CRITIQUE - Moteur LLM local obligatoire pour tout le système | ✅ Installé |
+| 2 | **Qdrant** | Mémoire vectorielle centrale pour RAG et agents | ✅ Opérationnel |
+| 3 | **Postgres** | Base de données pour n8n + états des agents | ✅ Opérationnel |
+| 4 | **OpenWebUI** | Interface principale + pipelines | ✅ Opérationnel |
+| 5 | **n8n** | Orchestrateur multi-agents central | ✅ Opérationnel |
+| 6 | **Langfuse** | Traçabilité obligatoire dès le début (Quick Wins) | ⚠️ Problème ClickHouse |
+
+#### Phase 2 - Services de support (Semaines 2-4)
+| Priorité | Service | Usage | Status |
+|----------|---------|-------|--------|
+| 7 | **Redis** | Cache embeddings + files d'attente n8n | 🔄 À implémenter |
+| 8 | **Loki** | Logs centralisés | 🔄 À implémenter |
+| 9 | **SearxNG** | Recherche web pour agents | ✅ Opérationnel |
+| 10 | **Traefik/NGINX** | Reverse proxy + sécurité | 🔄 À implémenter |
+
+#### Phase 3 - Spécialisations (Mois 2-3)
+| Priorité | Service | Usage spécialisé | Status |
+|----------|---------|------------------|--------|
+| 11 | **Whisper** | Transcription audio pour workflows | 🔄 À implémenter |
+| 12 | **Tesseract/OCR** | Pipeline documents (via n8n) | 🔄 À implémenter |
+| 13 | **Prometheus + Grafana** | Monitoring infra existant | 🔄 À implémenter |
+
+### Modifications techniques récentes
+- **Langfuse 3.98.0** : Version compatible ClickHouse mais avec bug de réplication
+- **Configuration ClickHouse** : Désactivée temporairement (problème Zookeeper)
+- **Démarrage séquentiel** : langfuse-web avant langfuse-worker pour éviter les deadlocks
+- **Mode DEV** : Option de reset complet (.env, AI_Data, logs) pour le développement
 
 ---
 

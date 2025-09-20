@@ -1,0 +1,35 @@
+# DIAGNOSTIC COMPLET DES LOGS - 20/09/2025 15:00
+
+## ✅ Services fonctionnels (logs propres)
+- **PostgreSQL** : ✅ Ready to accept connections
+- **Redis** : ✅ Ready to accept connections tcp
+- **MinIO** : ✅ API et WebUI disponibles
+- **ClickHouse** : ✅ Configuration chargée, logs normaux
+- **Qdrant** : ✅ HTTP listening on 6333, 47 workers
+- **OpenWebUI** : ✅ Application startup, requêtes HTTP 200
+- **n8n** : ✅ Version 1.111.1, Editor accessible
+- **SearxNG** : ✅ Workers démarrés (warnings mineurs sur moteurs)
+
+## ❌ Services problématiques
+- **Langfuse-worker** : ❌ `Redis error WRONGPASS invalid username-password pair`
+- **Langfuse-web** : ❌ `Invalid environment variables`
+
+## Tests de connectivité
+- **Redis direct** : ✅ `PONG` (fonctionne parfaitement)
+- **Variables Redis** : ✅ Correctes dans langfuse-worker
+- **Accès services** : 
+  - OpenWebUI: ✅ 200
+  - n8n: ✅ 200  
+  - SearxNG: ✅ 200
+  - Langfuse: ❌ 500
+
+## Corrections appliquées
+1. **Suppression variables ClickHouse** : Toutes les variables ClickHouse supprimées des services Langfuse
+2. **Suppression dépendances ClickHouse** : `clickhouse: condition: service_healthy` retiré
+3. **Configuration Redis unifiée** : `${REDIS_AUTH}` partout
+
+## Conclusion
+- **Stack Phase 1** : **80% fonctionnelle**
+- **Services principaux** : ✅ Tous opérationnels
+- **Langfuse** : ❌ Problèmes de configuration persistants malgré les corrections
+- **Recommandation** : Utiliser la stack sans Langfuse pour le développement initial

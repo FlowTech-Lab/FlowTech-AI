@@ -1,37 +1,64 @@
-#FlowTech-AI
+# FlowTech-AI
 
-## Premier démarrage
+## Stack IA Personnelle Multi-Agents
 
+### Architecture actuelle
+- **Ollama** (hors stack) : Moteur LLM local sur 192.168.0.2:11434
+- **Qdrant** : Mémoire vectorielle centrale pour RAG et agents
+- **Postgres** : Base de données pour n8n + états des agents
+- **OpenWebUI** : Interface principale + pipelines
+- **n8n** : Orchestrateur multi-agents central
+- **SearxNG** : Recherche web pour agents
+- **Langfuse** : Traçabilité 
+## Démarrage rapide
+
+### Premier démarrage
+```bash
+chmod +x init.sh
 ./init.sh
-docker compose up -d
+```
 
+Le script `init.sh` optimisé gère automatiquement :
+- ✅ Démarrage séquentiel des services
+- ✅ Mode DEV avec reset complet optionnel
+- ✅ Gestion des erreurs et logs
+- ✅ Permissions automatiques (chmod)
+- ✅ Configuration des variables d'environnement
 
-Dans Panneau administrateur > Reglages > recherche WEb "http://searxng:8080/search"
+### Configuration OpenWebUI
+Dans Panneau administrateur > Réglages > Recherche Web : `http://searxng:8080/search`
 
 ### Troubleshooting
-- If the stack refuses to start cleanly, remove the generated data and environment files (`rm -rf AI_Data .env`) and re-run `./init.sh` before launching `docker compose up -d` again.
+- **Reset complet** : Modifier `DEV_MODE=true` dans `init.sh` puis relancer
+- **Problème Langfuse** : Voir `error.txt` pour diagnostic complet
+- **Logs détaillés** : `docker compose logs -f [service]`
 
 
 
-Activer le pipeline Langfuse dans OpenWebUI
+## Configuration Langfuse
 
-Deux options valides :
+### Activer le pipeline Langfuse dans OpenWebUI
 
-UI : OpenWebUI → Settings → Pipelines → Add Filter → “Langfuse” → renseigne LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY. 
-Langfuse
-+1
+**Option 1 - Interface** : OpenWebUI → Settings → Pipelines → Add Filter → "Langfuse" → renseigner LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY
 
-Via env : tu as déjà posé LANGFUSE_* dans openwebui. Le filtre les lit et trace les messages sans code additionnel, comme indiqué par la doc Pipelines
+**Option 2 - Variables d'environnement** : Les variables LANGFUSE_* sont déjà configurées dans le script init.sh
 
+### Générer les clés API
+1. Ouvrir Langfuse : http://localhost:3300
+2. Créer le premier compte, l'organisation, puis un projet
+3. Project → Settings → API Keys → Create API Key
+4. Récupérer Public et Secret keys
 
+### ⚠️ Problème actuel
+Langfuse 3.98.0 a un bug avec ClickHouse (tables répliquées sans Zookeeper). Voir `error.txt` pour diagnostic complet.
 
-Générer les clés
+## Documentation
 
-Ouvre Langfuse: http://localhost:${LANGFUSE_PORT}
-
-Crée le premier compte, l’organisation, puis un projet.
-
-Project → Settings → API Keys → Create API Key. Récupère Public et Secret.
+- **`docs/spec.md`** : Spécifications techniques et stack priorisée
+- **`docs/ROADMAP.md`** : Roadmap de déploiement et priorités
+- **`docs/Agents.md`** : Architecture multi-agents
+- **`docs/TECHNICAL_CHANGES.md`** : Modifications techniques récentes
+- **`error.txt`** : Diagnostic complet Langfuse/ClickHouse
 
 
 
@@ -66,3 +93,8 @@ curl -s http://127.0.0.1:11434/api/generate \
 # IP hôte à utiliser depuis le client
 echo -e "\n[HOST_IP]"
 hostname -I | awk '{print $1}'
+
+
+
+
+utilisation de https://github.com/langfuse/langfuse
