@@ -1,6 +1,25 @@
 #!/bin/bash
 set -euo pipefail
 
+# ---- logging complet ----
+mkdir -p logs
+LOGFILE="logs/init-$(date +%Y%m%d-%H%M%S).log"
+{
+  echo "===== FlowTech-AI init $(date -Is) ====="
+  echo "PWD: $(pwd)"
+  echo "User: $(id -u):$(id -g)"
+} >>"$LOGFILE"
+
+exec > >(stdbuf -oL tee -a "$LOGFILE") 2>&1
+
+if [ "${INIT_DEBUG:-0}" = "1" ]; then
+  exec 9>>"$LOGFILE"
+  BASH_XTRACEFD=9
+  set -x
+fi
+
+trap 'ec=$?; echo; echo "[INFO ] init finished with exit code: $ec"; echo "Full log: $LOGFILE"; exit $ec' EXIT
+
 # -------- Helpers -----------------------------------------------------------
 need() {
   command -v "$1" >/dev/null 2>&1 || {
@@ -46,6 +65,19 @@ wait_for_service() {
   done
   log_warn "${service} not ready after ${timeout}s"
   return 1
+}
+
+run() {
+  local secs="${1:-20}"; shift
+  local cmd="$*"
+  log_info "RUN (timeout ${secs}s): $cmd"
+  if timeout "${secs}" bash -lc "$cmd"; then
+    log_ok "DONE: $cmd"
+  else
+    local rc=$?
+    log_warn "FAILED/timeout rc=$rc: $cmd"
+    return $rc
+  fi
 }
 
 # -------- Styling ----------------------------------------------------------
@@ -112,11 +144,17 @@ find ./AI_Data/searxng -type f -exec chmod 644 {} + 2>/dev/null || true
 # PostgreSQL init scripts directory – readable by postgres (UID 70)
 INIT_DIR="./AI_Data/postgres-init"
 mkdir -p "$INIT_DIR"
-if chown root:root "$INIT_DIR" 2>/dev/null; then
-  chmod 755 "$INIT_DIR"
+if command -v sudo >/dev/null 2>&1; then
+  sudo chown root:root "$INIT_DIR" || true
+  sudo chmod 755 "$INIT_DIR" || true
+  sudo find "$INIT_DIR" -type f -name '*.sh' -exec chmod 755 {} \; || true
+  sudo find "$INIT_DIR" -type f -name '*.sql*' -exec chmod 644 {} \; || true
+  sudo chown -R root:root "$INIT_DIR" || true
 else
-  log_warn "Unable to chown $INIT_DIR to root:root; ensure Docker adjusts permissions"
+  log_warn "sudo not available: ensure init scripts are readable by Postgres"
   chmod 755 "$INIT_DIR" 2>/dev/null || true
+  find "$INIT_DIR" -type f -name '*.sh' -exec chmod 755 {} \; >/dev/null 2>&1 || true
+  find "$INIT_DIR" -type f -name '*.sql*' -exec chmod 644 {} \; >/dev/null 2>&1 || true
 fi
 
 # PostgreSQL data directory – let postgres own files on first start
@@ -128,11 +166,21 @@ chmod 700 "$PGDATA_DIR" 2>/dev/null || true
 INIT_SQL="$INIT_DIR/01-create-langfuse.sql"
 if [ ! -f "$INIT_SQL" ]; then
   log_info "Writing PostgreSQL init script for langfuse database"
-  cat > "$INIT_SQL" <<'EOSQL'
+  TMP="$(mktemp)"
+  cat > "$TMP" <<'EOSQL'
 SELECT 'CREATE DATABASE langfuse'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'langfuse')\gexec
 EOSQL
-  chmod 644 "$INIT_SQL"
+  if command -v sudo >/dev/null 2>&1; then
+    sudo install -o root -g root -m 0644 "$TMP" "$INIT_SQL"
+    sudo chown root:root "$INIT_DIR"
+    sudo chmod 755 "$INIT_DIR"
+  else
+    mv "$TMP" "$INIT_SQL"
+    chmod 644 "$INIT_SQL"
+    chmod 755 "$INIT_DIR"
+  fi
+  rm -f "$TMP"
 fi
 
 log_ok "AI_Data folders ready with secure permissions"
@@ -150,14 +198,14 @@ if [ -f settings.yml ] && [ ! -f searxng/settings.yml ]; then
   log_info "Copied settings.yml into searxng/"
 fi
 for f in searxng/settings.yml searxng/limiter.toml; do
-  [ -f "$f" ] && chmod 600 "$f"
+  [ -f "$f" ] && chmod 644 "$f"
 done
 if [ -d searxng ]; then
   mkdir -p AI_Data/searxng
   cp -a searxng/. AI_Data/searxng/
   chown -R "$uid:$gid" AI_Data/searxng 2>/dev/null || true
-  find AI_Data/searxng -type d -exec chmod 700 {} +
-  find AI_Data/searxng -type f -exec chmod 600 {} +
+  find AI_Data/searxng -type d -exec chmod 755 {} +
+  find AI_Data/searxng -type f -exec chmod 644 {} +
 fi
 log_ok "SearxNG templates copied into AI_Data/searxng"
 
@@ -254,17 +302,16 @@ log_ok "Langfuse headless defaults ensured"
 
 # Step 7: ClickHouse credentials
 next_step "Generating ClickHouse credentials"
-sed -i '/^CLICKHOUSE_/d' .env
-CH_PASS="$(openssl rand -base64 18)"
-cat >> .env <<CHENV
-CLICKHOUSE_USER=langfuse
-CLICKHOUSE_PASSWORD=${CH_PASS}
-CLICKHOUSE_URL=http://clickhouse:8123
-CLICKHOUSE_MIGRATION_URL=clickhouse://clickhouse:9000
-CLICKHOUSE_DB=langfuse
-CHENV
+ensure_env CLICKHOUSE_USER "langfuse"
+ensure_env CLICKHOUSE_URL "http://clickhouse:8123"
+ensure_env CLICKHOUSE_MIGRATION_URL "clickhouse://clickhouse:9000"
+ensure_env CLICKHOUSE_DB "langfuse"
+if ! grep -qE '^CLICKHOUSE_PASSWORD=' .env; then
+  enforce_env CLICKHOUSE_PASSWORD "$(openssl rand -base64 18)"
+  log_info "Generated CLICKHOUSE_PASSWORD"
+fi
 chmod 600 .env
-log_ok "CLICKHOUSE_* variables refreshed"
+log_ok "CLICKHOUSE_* variables ensured"
 
 # Step 8: Provision ClickHouse and PostgreSQL
 next_step "Provisioning ClickHouse and PostgreSQL"
@@ -277,9 +324,8 @@ else
   docker compose up -d clickhouse postgres
 fi
 
-log_info "Tailing PostgreSQL logs during initialization"
-docker compose logs -f postgres > logs/postgres-init.log 2>&1 &
-LOG_PID=$!
+log_info "Capturing PostgreSQL init logs"
+docker compose logs --since 30s postgres | tee logs/postgres-init.log
 
 wait_for_service "ClickHouse" "docker compose exec -T clickhouse clickhouse-client -q 'SELECT 1'" 60 || true
 wait_for_service "PostgreSQL" "docker compose exec -T postgres pg_isready -U '$(getenv_value POSTGRES_USER)'" 60 || true
@@ -312,12 +358,29 @@ else
   fi
 fi
 
-log_info "Stopping temporary services"
-if kill "$LOG_PID" 2>/dev/null; then
-  wait "$LOG_PID" 2>/dev/null || true
+log_info "Tearing down temporary DB services"
+set +e
+
+run 10 "docker compose ps clickhouse postgres || true"
+run 15 "docker compose stop -t 5 clickhouse postgres || true"
+run 10 "docker compose ps clickhouse postgres || true"
+
+if docker ps --format '{{.Names}}' | grep -E '(clickhouse|postgres)(-[0-9]+)?$' >/dev/null; then
+  log_warn "Force killing lingering DB containers"
+  run 10 "docker compose kill clickhouse postgres || true"
 fi
-docker compose stop clickhouse postgres >/dev/null 2>&1 || true
-docker compose rm -f clickhouse postgres >/dev/null 2>&1 || true
+
+run 20 "docker compose rm -fsv clickhouse postgres || true"
+
+for c in clickhouse postgres; do
+  name="$(docker ps -a --format '{{.Names}}' | grep -E "${c}(-[0-9]+)?$" || true)"
+  if [ -n "$name" ]; then
+    run 10 "docker rm -f $name || true"
+  fi
+done
+
+run 10 "docker ps -a | grep -E 'clickhouse|postgres' || true"
+set -e
 
 # Step 9: final validation
 next_step "Validating environment configuration"

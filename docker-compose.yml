@@ -64,6 +64,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-n8n}
     volumes:
       - ./AI_Data/pgdata:/var/lib/postgresql/data
+      - ./AI_Data/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n} -d ${POSTGRES_DB:-n8n}"]
       interval: 5s

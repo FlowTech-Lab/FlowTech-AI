@@ -15,7 +15,7 @@ Renforcer d’abord les fondations (RAG natif, pipelines, traçabilité) avant d
 - ⬜ **Valider le pipeline “résumé PDF/logs”** : OpenWebUI → pipeline OCR → webhook n8n agent summary → retour UI.
 
 ## Étape 2 – Orchestration & Sécurité (Mois 2)
-- ⬜ **Configurer n8n en mode pipe** avec agents spécialisés (PDF, infra, FPV) exécutés en parallèle puis fusionnés.
+- ⬜ **Configurer n8n en mode pipe** Qwen3:8B pour tout (master, specialist, doc, code, recherche) DeepSeek-R1 pour ingestion vectorielle  exécutés en parallèle puis fusionnés.
 - ✅ **Ajouter la persistance des états d’agents dans Postgres** (`docker-compose.yml` configure déjà n8n sur Postgres via `DB_POSTGRESDB_*`).
 - ⬜ **Automatiser la rotation semestrielle des secrets** via rappel n8n + mise à jour des `.env`.
 - ⬜ **Activer le rate-limit (20 req/min/IP) sur les webhooks** en complément du HMAC.
