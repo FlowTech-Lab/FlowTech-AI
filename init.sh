@@ -317,6 +317,7 @@ log_ok "CLICKHOUSE_* variables ensured"
 next_step "Provisioning ClickHouse and PostgreSQL"
 log_info "Starting ClickHouse and PostgreSQL containers"
 mkdir -p logs
+START_TS="$(date -Is)"
 if docker compose up -d --wait clickhouse postgres 2>/dev/null; then
   log_ok "Containers reported healthy via docker compose --wait"
 else
@@ -325,7 +326,8 @@ else
 fi
 
 log_info "Capturing PostgreSQL init logs"
-docker compose logs --since 30s postgres | tee logs/postgres-init.log
+docker compose logs --since "$START_TS" --no-color postgres | tee logs/postgres-init.log >/dev/null
+docker compose logs --since "$START_TS" --no-color clickhouse | tee logs/clickhouse-init.log >/dev/null
 
 wait_for_service "ClickHouse" "docker compose exec -T clickhouse clickhouse-client -q 'SELECT 1'" 60 || true
 wait_for_service "PostgreSQL" "docker compose exec -T postgres pg_isready -U '$(getenv_value POSTGRES_USER)'" 60 || true
