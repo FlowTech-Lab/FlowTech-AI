@@ -46,7 +46,7 @@ readonly YELLOW="\033[33m"
 readonly BLUE="\033[36m"
 readonly RED="\033[31m"
 
-readonly TOTAL_STEPS=10
+readonly TOTAL_STEPS=11
 readonly AI_DATA_DIR="./AI_Data"
 readonly ENV_FILE=".env"
 readonly MIN_FREE_SPACE_KB=2097152  # 2GB en KB
@@ -88,7 +88,58 @@ check_disk_space() {
     return 1
   fi
   
-  log_success "Espace disque OK: $((available_space_kb / 1024 / 1024))GB disponible"
+  log_ok "Espace disque OK: $((available_space_kb / 1024 / 1024))GB disponible"
+  return 0
+}
+
+
+# Configuration ClickHouse
+configure_clickhouse() {
+  log_info "Configuration des utilisateurs ClickHouse..."
+  
+  # Attendre que ClickHouse soit prêt
+  local max_attempts=30
+  local attempt=1
+  
+  while [ $attempt -le $max_attempts ]; do
+    if docker exec clickhouse clickhouse-client --query "SELECT 1" >/dev/null 2>&1; then
+      log_ok "ClickHouse est prêt"
+      break
+    fi
+    
+    log_info "Attente de ClickHouse... (tentative $attempt/$max_attempts)"
+    sleep 2
+    attempt=$((attempt + 1))
+  done
+  
+  if [ $attempt -gt $max_attempts ]; then
+    log_error "ClickHouse n'est pas accessible après $max_attempts tentatives"
+    return 1
+  fi
+  
+  # Récupérer le mot de passe ClickHouse
+  local clickhouse_password
+  clickhouse_password=$(get_env_value CLICKHOUSE_PASSWORD)
+  
+  if [ -z "$clickhouse_password" ]; then
+    log_error "Mot de passe ClickHouse non trouvé"
+    return 1
+  fi
+  
+  # Créer l'utilisateur clickhouse s'il n'existe pas
+  log_info "Création de l'utilisateur clickhouse..."
+  if ! docker exec clickhouse clickhouse-client --user langfuse --password "$clickhouse_password" --query "SELECT name FROM system.users WHERE name = 'clickhouse'" | grep -q clickhouse; then
+    docker exec clickhouse clickhouse-client --user langfuse --password "$clickhouse_password" --query "CREATE USER IF NOT EXISTS clickhouse IDENTIFIED BY '$clickhouse_password'" >/dev/null 2>&1
+    log_ok "Utilisateur clickhouse créé"
+  else
+    log_info "Utilisateur clickhouse existe déjà"
+  fi
+  
+  # Octroyer les permissions
+  log_info "Octroi des permissions à l'utilisateur clickhouse..."
+  docker exec clickhouse clickhouse-client --user langfuse --password "$clickhouse_password" --query "GRANT ALL ON default.* TO clickhouse" >/dev/null 2>&1
+  log_ok "Permissions ClickHouse configurées"
+  
   return 0
 }
 
@@ -97,7 +148,7 @@ pull_docker_images() {
   log_info "Téléchargement des images Docker (timeout: ${DOCKER_PULL_TIMEOUT}s)..."
   
   if run_with_timeout "$DOCKER_PULL_TIMEOUT" "docker compose pull"; then
-    log_success "Images Docker téléchargées avec succès"
+    log_ok "Images Docker téléchargées avec succès"
     return 0
   else
     log_error "Échec du téléchargement des images Docker"
@@ -590,15 +641,22 @@ if [ -d searxng ]; then
   # Demander l'email de l'utilisateur si pas défini
   local user_mail
   if [ -z "$(get_env_value LANGFUSE_INIT_USER_EMAIL)" ]; then
-    printf "\n${YELLOW}Configuration Langfuse - Email utilisateur${RESET}\n"
-    printf "Entrez l'email de l'utilisateur administrateur Langfuse: "
-    read -r user_mail
-    
-    # Validation basique de l'email
-    if [[ ! "$user_mail" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-      log_error "Email invalide: $user_mail"
-      log_error "Format attendu: utilisateur@domaine.com"
-      exit 1
+    # Vérifier si on est en mode interactif (terminal avec utilisateur)
+    if [ -t 0 ] && [ -t 1 ]; then
+      printf "\n${YELLOW}Configuration Langfuse - Email utilisateur${RESET}\n"
+      printf "Entrez l'email de l'utilisateur administrateur Langfuse: "
+      read -r user_mail
+      
+      # Validation basique de l'email
+      if [[ ! "$user_mail" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        log_error "Email invalide: $user_mail"
+        log_error "Format attendu: utilisateur@domaine.com"
+        exit 1
+      fi
+    else
+      # Mode non-interactif : utiliser un email par défaut valide
+      user_mail="admin@flowtech.local"
+      log_info "Mode non-interactif détecté, utilisation de l'email par défaut: $user_mail"
     fi
     
     set_env_value LANGFUSE_INIT_USER_EMAIL "$user_mail" enforce
@@ -715,6 +773,15 @@ if [ -d searxng ]; then
   # Attendre que tous les services soient prêts
   log_info "Attente de la stabilisation des services (60s)..."
   sleep 60
+  
+  # Configuration ClickHouse
+  next_step "Configuration des utilisateurs ClickHouse"
+  if configure_clickhouse; then
+    log_ok "Configuration ClickHouse terminée"
+  else
+    log_warn "Échec de la configuration ClickHouse (non bloquant)"
+  fi
+  
   
   # Attendre que Langfuse soit disponible
   local lf_url
