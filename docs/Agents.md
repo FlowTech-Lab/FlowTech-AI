@@ -1,106 +1,185 @@
-# Architecture Multi-Agents FlowTech-AI
+# FlowTech-AI Multi-Agent Architecture
 
-## Stack actuelle et priorités
+## Current Stack and Priorities
 
-### Services opérationnels ✅
-- **Ollama** (hors stack) : Moteur LLM local sur 192.168.0.2:11434
-- **Qdrant** : Mémoire vectorielle centrale pour RAG et agents
-- **Postgres** : Base de données pour n8n + états des agents
-- **OpenWebUI** : Interface principale + pipelines
-- **n8n** : Orchestrateur multi-agents central
-- **SearxNG** : Recherche web pour agents
+### ✅ Operational Services
+- **Ollama** (external): Local LLM engine on 192.168.0.2:11434
+- **Qdrant**: Central vector memory for RAG and agents
+- **PostgreSQL**: Database for n8n + agent states
+- **OpenWebUI**: Main interface + pipelines
+- **n8n**: Central multi-agent orchestrator
+- **SearxNG**: Web search for agents
+- **Langfuse**: AI observability and tracing
+- **Redis**: Cache and queue management
+- **ClickHouse**: Analytics database
+- **MinIO**: S3-compatible storage
 
-### Services en cours de résolution ⚠️
-- **Langfuse 3.98.0** : Traçabilité 
-
-### Services à déployer 🔄
-- **Redis** : Cache embeddings + files d'attente n8n
-- **Loki** : Logs centralisés
+### 🔄 Services to Deploy
+- **Loki**: Centralized logging
+- **Prometheus + Grafana**: Monitoring and metrics
 
 ---
 
-## Rôles des agents dans un système multi-agents n8n + Qwen3
-1. Master Agent (Agent Central / Brain)
-Rôle principal : Coordonne et orchestre les demandes.
+## Multi-Agent Roles in n8n + Qwen3 System
 
-Fonctions :
+### 1. Master Agent (Central Agent / Brain)
+**Primary Role**: Coordinates and orchestrates requests.
 
-Distribue et délègue les tâches aux agents spécialisés.
+**Functions**:
+- Distributes and delegates tasks to specialized agents
+- Manages global memory or shared context (vectorDB integration)
+- Synthesizes and compiles responses from junior agents
+- Applies business logic and priorities
 
-Gère la mémoire globale ou contexte partagé (intégration vectorDB).
+**Ideal Model**: Qwen3 8B (better comprehension, synthesis, extended context management)
 
-Synthétise et compile les réponses des agents juniors.
+**Example**: Receive a composite request, analyze intent, demultiplex to specialists, and aggregate returns.
 
-Applique la logique métier et les priorités.
+### 2. Documentation Agent (Doc Agent)
+**Primary Role**: Access and manipulation of vectorized documentation.
 
-Modèle idéal : Qwen3 8B (meilleure comprehension, synthèse, gestion contexte étendu).
+**Functions**:
+- Direct interface with vector database (Qdrant, Chroma, Supabase)
+- Search, extraction, summary, and contextualization on business documents (PDF, markdown, handbook, logs)
+- Can pre-filter documentation for the master agent
 
-Exemple : Recevoir une demande composite, analyser l’intention, démultiplexer vers les spécialistes, et agréger les retours.
+**Ideal Model**: DeepSeek R1 (compact, specialized in text/document processing)
 
-2. Documentation Agent (Doc Agent)
-Rôle principal : Accès et manipulation de la documentation vectorisée.
+**Example**: Quickly find technical procedures, extract client data, qualify support examples.
 
-Fonctions :
+### 3. Research Agent (Internet Search)
+**Primary Role**: Real-time Internet search.
 
-Interface directe avec la base vectorielle (Qdrant, Chroma, Supabase).
+**Functions**:
+- Query Search APIs (SearxNG, Bing, Wikipedia, forums)
+- Aggregate and synthesize fresh information
+- Validate or complete information on novelty or trends
 
-Recherche, extraction, résumé, et contextualisation sur documents métiers (PDF, markdown, handbook, logs).
+**Ideal Model**: Qwen3 4B, or OpenAI GPT-4 (faster on short queries)
 
-Peut pré-filtrer la doc pour le master agent.
+**Example**: Find latest regulatory updates or product novelties.
 
-Modèle idéal : DeepSeek R1 (compact, spécialisé en traitement du texte/document).
+### 4. Code/Automation Agent
+**Primary Role**: Script generation and execution, playbooks, snippets, infra configurations.
 
-Exemple : Trouver les procédures techniques rapidement, extraire données clients, qualifier des exemples SAV.
+**Functions**:
+- Write Bash scripts, YAML Ansible, Terraform Playbooks, Proxmox commands
+- Control syntax, logic, and automation best practices
+- Technical validation before application
 
-3. Research Agent (Recherche Internet)
-Rôle principal : Recherche en temps réel sur Internet.
+**Ideal Model**: Qwen3 4B (sufficiently performant for code, lightweight)
 
-Fonctions :
+**Example**: Automatically generate VLAN deployment playbook, monitoring script, or alerts.
 
-Interrogation d'API Search (SearxNG, Bing, Wikipedia, forums).
+### 5. Specialist / Expert Agents (optional)
+**Role**: Specialized agents by domain (ex: Security, Support, Home Automation).
 
-Agrégation et synthèse d’information fraîche.
+**Functions**:
+- Receive specialized prompt, respond with sharp expertise
+- Can be used by master for complex task delegation
 
-Validation ou complétion d’information sur nouveauté ou tendances.
+## Best Practices Summary
+- **Clear responsibility separation**: Each agent has precise scope and its tools
+- **Communication via n8n nodes/sub-workflows**: Master agent creates task, waits for response
+- **Shared vector memory**: Promotes consistency and shared histories, especially for documentation
+- **Model choice adapted to task**: Qwen3:8B for master/doc, Qwen3:4B or lightweight models for short searches and scripting
+- **Human supervision and control possible**: Via n8n hooks or notifications before critical execution
 
-Modèle idéal : Qwen3 4B, ou OpenAI GPT-4 (plus rapide sur requêtes courtes).
+## Implementation Architecture
 
-Exemple : Trouver les dernières mises à jour réglementaires ou nouveautés produits.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    OpenWebUI (Main UI)                     │
+│              - User Interface                              │
+│              - Pipeline Management                         │
+│              - RLHF Feedback                               │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ Webhook
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    n8n Orchestrator                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │Master Agent │  │ Doc Agent   │  │Research Agent│        │
+│  │(Qwen3 8B)   │  │(DeepSeek R1)│  │(Qwen3 4B)   │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │Code Agent   │  │Specialist   │  │Merge Node   │        │
+│  │(Qwen3 4B)   │  │Agents       │  │(Response    │        │
+│  └─────────────┘  └─────────────┘  │ Aggregation)│        │
+└─────────────────────┬───────────────┴─────────────┘        │
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Data Layer                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Qdrant    │  │ PostgreSQL  │  │    Redis    │        │
+│  │(Vector DB)  │  │(Agent State)│  │   (Cache)   │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘        │
+└─────────────────────────────────────────────────────────────┘
+```
 
-4. Code/Automation Agent
-Rôle principal : Génération et exécution de scripts, playbooks, snippets, configurations infra.
+## Agent Communication Flow
 
-Fonctions :
+1. **User Request** → OpenWebUI
+2. **Request Analysis** → Master Agent (Qwen3 8B)
+3. **Task Distribution** → Specialized Agents
+4. **Parallel Execution** → Doc, Research, Code Agents
+5. **Response Aggregation** → Merge Node
+6. **Final Response** → OpenWebUI → User
 
-Écrire scripts Bash, YAML Ansible, Playbooks Terraform, commandes Proxmox.
+## Data Flow
 
-Contrôle syntaxe, logique et bonne pratique d'automatisation.
+- **Short-term Memory**: OpenWebUI (20 messages)
+- **Long-term Memory**: Qdrant (vectorized conversations, documents)
+- **Agent State**: PostgreSQL (workflow persistence)
+- **Cache**: Redis (embedding cache, queue management)
+- **Observability**: Langfuse (prompt tracing, latency monitoring)
 
-Validation technique avant application.
+## Configuration Requirements
 
-Modèle idéal : Qwen3 4B (assez performant pour code, léger).
+### OpenWebUI
+- Enable RAG pipeline with Qdrant
+- Configure webhook endpoints for n8n
+- Set up RLHF feedback collection
 
-Exemple : Générer automatiquement un playbook de déploiement VLAN, script de monitoring ou alertes.
+### n8n
+- Configure webhook triggers
+- Set up agent workflows
+- Enable PostgreSQL for state persistence
+- Configure HMAC webhook security
 
-5. Specialist / Expert Agents (optionnel)
-Rôle : Agents spécialisés selon domaine (ex: Sécurité, SAV, Domotique).
+### Qdrant
+- Create collections: `docs_public`, `docs_prive`, `convos_long`
+- Configure vector dimensions for chosen embedding model
+- Set up proper indexing and filtering
 
-Fonctions :
+### PostgreSQL
+- Create tables for agent state management
+- Configure connection pooling
+- Set up backup and recovery procedures
 
-Reçoivent prompt spécial, répondent avec expertise pointue.
+## Monitoring and Observability
 
-Peuvent être utilisés par le master pour délégation de tâches complexes.
+### Langfuse Integration
+- Track all agent interactions
+- Monitor response latencies
+- Log errors and performance metrics
+- Generate usage reports
 
-Synthèse des bonnes pratiques
-Séparation claire des responsabilités : chaque agent a un périmètre précis et ses outils.
+### Health Checks
+- Agent availability monitoring
+- Database connection status
+- Vector database health
+- Cache performance metrics
 
-Communication par nœuds/sub-workflows n8n : le master agent créé une tâche, attend la réponse.
+## Security Considerations
 
-Mémoire vectorielle partagée : favorise cohérence et historiques partagés, surtout pour documentation.
+- **Webhook Security**: HMAC signatures for all n8n webhooks
+- **Rate Limiting**: 20 requests/minute per IP
+- **Access Control**: RBAC for OpenWebUI
+- **Data Privacy**: Local processing by default
+- **Audit Trail**: Complete logging via Langfuse
 
-Choix du modèle adapté à la tâche : Qwen3:8B pour master/doc, Qwen3:4B ou modèles légers pour recherches courts et scripting.
+---
 
-Supervision et contrôle humain possible : via hooks n8n ou notifications avant exécution critique.
-
-Si tu souhaites, je peux te préparer un template workflow n8n structuré avec ces agents, adaptés à ta GTX 1660 Ti et ta stack (Qwen3+ DeepSeek + vectorDB).
-
+*This architecture provides a robust foundation for multi-agent AI workflows while maintaining security, observability, and scalability.*

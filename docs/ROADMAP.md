@@ -1,57 +1,63 @@
-# Ordre optimisé de déploiement de la stack IA FlowTech
+# FlowTech-AI Deployment Roadmap
 
-## Recommandation principale
-Renforcer d’abord les fondations (RAG natif, pipelines, traçabilité) avant d’industrialiser l’orchestration multi-agents puis d’ouvrir les spécialisations. Cette séquence offre des retours rapides, un socle stable et une montée en charge progressive.
+## Main Recommendation
+Strengthen foundations first (native RAG, pipelines, traceability) before industrializing multi-agent orchestration then opening specializations. This sequence offers quick returns, stable foundation, and progressive scaling.
 
-## Étape 1 – Fondations & Quick Wins (Jours 0–30)
-- ✅ **Script init.sh optimisé** - Démarrage séquentiel, mode DEV, gestion des erreurs
-- ✅ **Stack core opérationnelle** - Qdrant, Postgres, OpenWebUI, n8n, SearxNG fonctionnels
-- ⬜ **Activer RAG natif + Pipelines OpenWebUI** (OCR, ingestion, RLHF) ; `VECTOR_DB`/`RAG_VECTOR_DB` à configurer
-- ⬜ **Créer les répertoires de données alignés avec Qdrant**  
-  - `/AI_Data/docs_public/` → contenu auto-vectorisé (guides, docs techniques, logs généraux) → Qdrant `docs_public`.  
-  - `/AI_Data/docs_prive/` → fichiers sensibles, vectorisation uniquement si approbation manuelle → Qdrant `docs_prive`.  
-  - `/AI_Data/convos_long/` → stockage brut des conversations longues (journalisation), relayé vers Qdrant `convos_long` par n8n.
-- ⬜ **Déployer Redis** pour cache embeddings + files d'attente n8n (priorité Phase 2)
-- ⬜ **Déployer Loki** pour collecter les logs n8n/OpenWebUI (stack actuelle limitée à Prometheus/Grafana sur VM externe, non raccordés).
-- ⬜ **Mettre en place webhooks n8n signés HMAC + RBAC OpenWebUI** (Basic Auth n8n déjà activée, mais HMAC/Rate-limit/RBAC non documentés).
-- ⬜ **Valider le pipeline "résumé PDF/logs"** : OpenWebUI → pipeline OCR → webhook n8n agent summary → retour UI.
+## Step 1 – Foundations & Quick Wins (Days 0–30)
+- ✅ **Optimized init.sh script** - Sequential startup, DEV mode, error handling
+- ✅ **Operational core stack** - Qdrant, PostgreSQL, OpenWebUI, n8n, SearxNG functional
+- ✅ **Langfuse integration** - AI observability and tracing operational
+- ✅ **Redis, ClickHouse, MinIO** - Support services operational
+- ⬜ **Enable native RAG + OpenWebUI Pipelines** (OCR, ingestion, RLHF); configure `VECTOR_DB`/`RAG_VECTOR_DB`
+- ⬜ **Create data directories aligned with Qdrant**
+  - `/AI_Data/docs_public/` → auto-vectorized content (guides, technical docs, general logs) → Qdrant `docs_public`
+  - `/AI_Data/docs_prive/` → sensitive files, vectorization only with manual approval → Qdrant `docs_prive`
+  - `/AI_Data/convos_long/` → raw storage of long conversations (logging), relayed to Qdrant `convos_long` by n8n
+- ⬜ **Deploy Loki** for collecting n8n/OpenWebUI logs (current stack limited to Prometheus/Grafana on external VM, not connected)
+- ⬜ **Implement HMAC-signed n8n webhooks + OpenWebUI RBAC** (n8n Basic Auth already enabled, but HMAC/Rate-limit/RBAC not documented)
+- ⬜ **Validate "PDF/log summary" pipeline**: OpenWebUI → OCR pipeline → n8n summary agent webhook → UI return
 
-## Étape 2 – Orchestration & Sécurité (Mois 2)
-- ⬜ **Configurer n8n en mode pipe** Qwen3:8B pour tout (master, specialist, doc, code, recherche) DeepSeek-R1 pour ingestion vectorielle  exécutés en parallèle puis fusionnés.
-- ✅ **Ajouter la persistance des états d’agents dans Postgres** (`docker-compose.yml` configure déjà n8n sur Postgres via `DB_POSTGRESDB_*`).
-- ⬜ **Automatiser la rotation semestrielle des secrets** via rappel n8n + mise à jour des `.env`.
-- ⬜ **Activer le rate-limit (20 req/min/IP) sur les webhooks** en complément du HMAC.
-- ⬜ **Mettre en place l’ingestion OCR nocturne** (PDF lourds) avec `qdrant-snapshot`/`pg_dump` avant PBS/Proxmox.
-- ⬜ **Produire les premiers rapports mensuels Langfuse** (latence, erreurs, feedback) exportés vers Nextcloud.
+## Step 2 – Orchestration & Security (Month 2)
+- ⬜ **Configure n8n in pipe mode** Qwen3:8B for everything (master, specialist, doc, code, search) DeepSeek-R1 for vector ingestion executed in parallel then merged
+- ✅ **Add agent state persistence in PostgreSQL** (`docker-compose.yml` already configures n8n on PostgreSQL via `DB_POSTGRESDB_*`)
+- ⬜ **Automate semiannual secret rotation** via n8n reminder + `.env` updates
+- ⬜ **Enable rate-limit (20 req/min/IP) on webhooks** in addition to HMAC
+- ⬜ **Implement nightly OCR ingestion** (heavy PDFs) with `qdrant-snapshot`/`pg_dump` before PBS/Proxmox
+- ⬜ **Produce first monthly Langfuse reports** (latency, errors, feedback) exported to Nextcloud
 
-## Étape 3 – Ops & Knowledge (Mois 3)
-- ⬜ **Générer automatiquement le wiki infra** (Markdown) via n8n → publication Nextcloud/GitHub.
-- ⬜ **Étendre la segmentation Qdrant** par projet/sensibilité + réglages par défaut `top_k=5`, `min_score=0.78`, `max_context_tokens=3000`.
-- ⬜ **Déployer Prometheus + Grafana + Loki** avec dashboards unifiés (n8n, OpenWebUI, Ollama) et alertes reliées à n8n.
-- ⬜ **Consigner le feedback IA** et préparer un dataset RLHF utilisable pour futurs fine-tunings.
+## Step 3 – Ops & Knowledge (Month 3)
+- ⬜ **Auto-generate infra wiki** (Markdown) via n8n → Nextcloud/GitHub publication
+- ⬜ **Extend Qdrant segmentation** by project/sensitivity + default settings `top_k=5`, `min_score=0.78`, `max_context_tokens=3000`
+- ⬜ **Deploy Prometheus + Grafana + Loki** with unified dashboards (n8n, OpenWebUI, Ollama) and alerts connected to n8n
+- ⬜ **Record AI feedback** and prepare RLHF dataset usable for future fine-tuning
 
-## Étape 4 – Spécialisation (3–6 mois)
-- ⬜ **Livrer le pipeline Flow Tuning FPV** (upload Blackbox → analyse IA → rapport Markdown).
-- ⬜ **Passer de 1 à 3–5 agents n8n spécialisés** (PDF résumé, SearxNG résumé, logs summary, tuning, monitoring).
-- ⬜ **Brancher Prometheus/Grafana à n8n** pour des alertes enrichies (Discord/Telegram) et validations dans le pipeline sécurité.
-- ⬜ **Valider des agents semi-autonomes** capables d’enchaîner plusieurs actions avec garde-fous.
+## Step 4 – Specialization (3–6 months)
+- ⬜ **Deliver complete Flow Tuning FPV pipeline** (Blackbox upload → AI analysis → Markdown report)
+- ⬜ **Transition from 1 to 3–5 specialized n8n agents** (PDF summary, SearxNG summary, log summary, tuning, monitoring)
+- ⬜ **Connect Prometheus/Grafana to n8n** for enriched alerts (Discord/Telegram) and validations in security pipeline
+- ⬜ **Validate semi-autonomous agents** capable of chaining multiple actions with safeguards
 
-## Étape 5 – Avancé (>6 mois)
-- ⬜ **Intégrer Trading-LAB (Freqtrade)** pour backtests et analyses IA orchestrés.
-- ⬜ **Étendre vers le multi-interface** (Telegram, WhatsApp) via pipelines n8n.
-- ⬜ **Expérimenter Flowise, Neo4j, Vault** et autres services optionnels une fois Langfuse + RBAC + HMAC stabilisés.
-- ⬜ **Évaluer k3s/GitOps** si la charge multi-utilisateurs impose une évolution au-delà de Docker Compose.
+## Step 5 – Advanced (>6 months)
+- ⬜ **Integrate Trading-LAB (Freqtrade)** for backtests and AI-orchestrated analyses
+- ⬜ **Extend to multi-interface** (Telegram, WhatsApp) via n8n pipelines
+- ⬜ **Experiment with Flowise, Neo4j, Vault** and other optional services once Langfuse + RBAC + HMAC stabilized
+- ⬜ **Evaluate k3s/GitOps** if multi-user load requires evolution beyond Docker Compose
 
 ---
 
-### État actuel rapide
-- ✅ **Stack core opérationnelle** : Qdrant, OpenWebUI, n8n, Postgres, SearxNG fonctionnels
-- ✅ **Script init.sh optimisé** : Démarrage séquentiel, mode DEV, gestion des erreurs, chmod automatique
-- ⚠️ **Langfuse 3.98.0** : Installé mais problème ClickHouse (bug de réplication, voir error.txt)
-- ✅ **Ollama** : Installé hors stack (192.168.0.2:11434) - CRITIQUE pour le système
-- ⬜ **RAG natif** : À activer dans OpenWebUI (VECTOR_DB/Qdrant)
-- ⬜ **Redis** : À déployer pour cache embeddings + files d'attente n8n
-- ⬜ **Loki** : À déployer pour logs centralisés
-- ⬜ **HMAC/RBAC** : À implémenter (Basic Auth n8n déjà activée)
-- ❌ **Services retirés** : ClickHouse, ComfyUI, Piper, Vault, Neo4j, Flowise, Supabase, RabbitMQ/Kafka
-- 📋 **Documentation** : Mise à jour avec stack priorisée et modifications techniques
+### Current Quick Status
+- ✅ **Operational core stack**: Qdrant, OpenWebUI, n8n, PostgreSQL, SearxNG functional
+- ✅ **Optimized init.sh script**: Sequential startup, DEV mode, error handling, automatic chmod
+- ✅ **Langfuse 3.x**: Installed and operational with ClickHouse, Redis, MinIO integration
+- ✅ **Ollama**: Installed external to stack (192.168.0.2:11434) - CRITICAL for system
+- ⬜ **Native RAG**: To enable in OpenWebUI (VECTOR_DB/Qdrant)
+- ⬜ **Loki**: To deploy for centralized logging
+- ⬜ **HMAC/RBAC**: To implement (n8n Basic Auth already enabled)
+- ❌ **Removed services**: ClickHouse, ComfyUI, Piper, Vault, Neo4j, Flowise, Supabase, RabbitMQ/Kafka
+- 📋 **Documentation**: Updated with prioritized stack and technical modifications
+
+### Implementation Notes
+- **Official Langfuse Configuration**: Based on [Langfuse Official Docker Compose](https://github.com/langfuse/langfuse/blob/main/docker-compose.yml)
+- **Service Dependencies**: Proper startup order with health checks implemented
+- **Data Persistence**: All data stored in `./AI_Data/` directory structure
+- **Network Security**: Services communicate via internal Docker network

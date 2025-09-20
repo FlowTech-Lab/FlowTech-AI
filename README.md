@@ -1,100 +1,126 @@
 # FlowTech-AI
 
-## Stack IA Personnelle Multi-Agents
+## Personal Multi-Agent AI Stack
 
-### Architecture actuelle
-- **Ollama** (hors stack) : Moteur LLM local sur 192.168.0.2:11434
-- **Qdrant** : Mémoire vectorielle centrale pour RAG et agents
-- **Postgres** : Base de données pour n8n + états des agents
-- **OpenWebUI** : Interface principale + pipelines
-- **n8n** : Orchestrateur multi-agents central
-- **SearxNG** : Recherche web pour agents
-- **Langfuse** : Traçabilité 
-## Démarrage rapide
+A comprehensive, locally-deployed AI infrastructure designed for FlowTech's FPV, infrastructure, automation, and documentation needs.
 
-### Premier démarrage
+### 🚀 Quick Start
+
 ```bash
 chmod +x init.sh
 ./init.sh
 ```
 
-Le script `init.sh` optimisé gère automatiquement :
-- ✅ Démarrage séquentiel des services
-- ✅ Mode DEV avec reset complet optionnel
-- ✅ Gestion des erreurs et logs
-- ✅ Permissions automatiques (chmod)
-- ✅ Configuration des variables d'environnement
+The optimized `init.sh` script automatically handles:
+- ✅ Sequential service startup with proper dependencies
+- ✅ DEV mode with optional complete reset
+- ✅ Error handling and comprehensive logging
+- ✅ Automatic permissions (chmod)
+- ✅ Environment variable configuration
+- ✅ Disk space verification
+- ✅ Docker image pre-pulling
 
-### Configuration OpenWebUI
-Dans Panneau administrateur > Réglages > Recherche Web : `http://searxng:8080/search`
+### 📋 Current Stack Status
 
-### Troubleshooting
-- **Reset complet** : Modifier `DEV_MODE=true` dans `init.sh` puis relancer
-- **Problème Langfuse** : Voir `error.txt` pour diagnostic complet
-- **Logs détaillés** : `docker compose logs -f [service]`
+#### ✅ Operational Services
+- **OpenWebUI** : Main interface + pipelines (http://localhost:8081)
+- **n8n** : Multi-agent orchestrator (http://localhost:5678)
+- **SearxNG** : Web search for agents (http://localhost:8082)
+- **Langfuse** : AI observability and tracing (http://localhost:3300)
+- **Qdrant** : Vector memory for RAG and agents (http://localhost:6333)
+- **PostgreSQL** : Database for n8n + agent states
+- **Redis** : Cache and queue management
+- **ClickHouse** : Analytics database
+- **MinIO** : S3-compatible storage
 
+#### 🔧 External Dependencies
+- **Ollama** : Local LLM engine (192.168.0.2:11434) - **CRITICAL**
 
+### 🏗️ Architecture
 
-## Configuration Langfuse
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   OpenWebUI     │    │      n8n        │    │    SearxNG      │
+│  (Main UI)      │◄──►│ (Orchestrator)  │◄──►│  (Web Search)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│     Qdrant      │    │   PostgreSQL    │    │     Redis       │
+│ (Vector Store)  │    │   (Database)    │    │   (Cache)       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   ClickHouse    │    │     MinIO       │    │    Langfuse     │
+│  (Analytics)    │    │   (Storage)     │    │ (Observability) │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
-### Activer le pipeline Langfuse dans OpenWebUI
+### 🔧 Configuration
 
-**Option 1 - Interface** : OpenWebUI → Settings → Pipelines → Add Filter → "Langfuse" → renseigner LANGFUSE_HOST, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY
+#### OpenWebUI Setup
+In Admin Panel > Settings > Web Search: `http://searxng:8080/search`
 
-**Option 2 - Variables d'environnement** : Les variables LANGFUSE_* sont déjà configurées dans le script init.sh
+#### Langfuse Integration
+1. Access Langfuse: http://localhost:3300
+2. Create account, organization, and project
+3. Generate API keys in Project > Settings > API Keys
+4. Configure OpenWebUI pipeline with Langfuse credentials
 
-### Générer les clés API
-1. Ouvrir Langfuse : http://localhost:3300
-2. Créer le premier compte, l'organisation, puis un projet
-3. Project → Settings → API Keys → Create API Key
-4. Récupérer Public et Secret keys
+### 🛠️ Troubleshooting
 
-### ⚠️ Problème actuel
-Langfuse 3.98.0 a un bug avec ClickHouse (tables répliquées sans Zookeeper). Voir `error.txt` pour diagnostic complet.
+#### Complete Reset
+```bash
+# Edit init.sh and set DEV_MODE=true
+# Then run:
+./init.sh
+```
 
-## Documentation
+#### Service Logs
+```bash
+docker compose logs -f [service-name]
+```
 
-- **`docs/spec.md`** : Spécifications techniques et stack priorisée
-- **`docs/ROADMAP.md`** : Roadmap de déploiement et priorités
-- **`docs/Agents.md`** : Architecture multi-agents
-- **`docs/TECHNICAL_CHANGES.md`** : Modifications techniques récentes
-- **`error.txt`** : Diagnostic complet Langfuse/ClickHouse
+#### Health Checks
+```bash
+# Check all services
+curl -s http://localhost:8081  # OpenWebUI
+curl -s http://localhost:5678  # n8n
+curl -s http://localhost:8082  # SearxNG
+curl -s http://localhost:3300  # Langfuse
+curl -s http://localhost:6333  # Qdrant
+```
 
+### 📚 Documentation
 
+- **`docs/spec.md`** : Technical specifications and prioritized stack
+- **`docs/ROADMAP.md`** : Deployment roadmap and priorities
+- **`docs/Agents.md`** : Multi-agent architecture
+- **`docs/TECHNICAL_CHANGES.md`** : Recent technical modifications
 
+### 🔗 External References
 
+This implementation is based on the official Langfuse Docker Compose configuration:
+- **Source**: [Langfuse Official Docker Compose](https://github.com/langfuse/langfuse/blob/main/docker-compose.yml)
+- **Version**: Langfuse 3.x with ClickHouse, Redis, and MinIO integration
 
+### 🎯 Key Features
 
+- **Multi-Agent Orchestration**: n8n-based agent coordination
+- **Vector RAG**: Qdrant-powered document retrieval
+- **AI Observability**: Langfuse tracing and monitoring
+- **Local LLM**: Ollama integration for privacy
+- **Web Search**: SearxNG for real-time information
+- **Persistent Storage**: PostgreSQL + ClickHouse + MinIO
 
+### 🔒 Security
 
+- **Local-First**: All services run locally by default
+- **Network Isolation**: Services communicate via internal Docker network
+- **Authentication**: Built-in auth for all web interfaces
+- **Data Persistence**: All data stored in `./AI_Data/` directory
 
-Bonnus : Instrallation de ollama et modèles de bases
+---
 
-
-# (re)start Ollama GPU en propre
-docker rm -f ollama >/dev/null 2>&1 || true
-docker run --gpus all -d --restart unless-stopped \
-  -p 11434:11434 -v /opt/ollama:/root/.ollama \
-  --name ollama ollama/ollama:latest
-
-# 2) Tirer un modèle sûr pour 6 Go VRAM (petit, rapide)
-#docker exec -it ollama ollama pull llama3.2:3b
-
-# Option: tenter un 7B quantisé (peut passer sur 6 Go selon contexte)
-docker exec -it ollama ollama pull qwen2.5:7b
-docker exec -it ollama ollama pull huihui_ai/qwen2.5-1m-abliterated:7b
-# docker exec -it ollama ollama pull mistral:7b
-
-# smoke test API locale
-echo '[TEST] generate'
-curl -s http://127.0.0.1:11434/api/generate \
-  -d '{"model":"llama3.2:3b","prompt":"Donne exactement 5 parfums de glace, une puce par ligne, en français.","stream":false}'
-
-# IP hôte à utiliser depuis le client
-echo -e "\n[HOST_IP]"
-hostname -I | awk '{print $1}'
-
-
-
-
-utilisation de https://github.com/langfuse/langfuse
+**FlowTech-AI** - Personal AI infrastructure, automation, and documentation
