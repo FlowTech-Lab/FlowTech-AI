@@ -5,8 +5,6 @@
 ./init.sh
 docker compose up -d
 
-docker exec -it postgres psql -U ${POSTGRES_USER:-n8n} -c 'CREATE DATABASE langfuse;'
-
 
 Dans Panneau administrateur > Reglages > recherche WEb "http://searxng:8080/search"
 

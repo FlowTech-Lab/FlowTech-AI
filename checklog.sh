@@ -25,7 +25,7 @@ log_ok()    { printf "%b[ OK  ]%b %s\n"    "$GREEN" "$RESET" "$*"; }
 log_warn()  { printf "%b[WARN ]%b %s\n"    "$YELLOW" "$RESET" "$*"; }
 log_error() { printf "%b[FAIL ]%b %s\n"    "$RED"   "$RESET" "$*"; }
 
-TOTAL_STEPS=14
+TOTAL_STEPS=15
 STEP=0
 next_step() {
   STEP=$((STEP + 1))
@@ -62,11 +62,12 @@ fi
 
 next_step "Ensuring Langfuse database exists"
 PGU=$(grep -E '^POSTGRES_USER=' .env | cut -d= -f2)
+[ -z "$PGU" ] && PGU="n8n"
 if docker compose exec -T postgres psql -U "$PGU" -tc "SELECT 1 FROM pg_database WHERE datname='langfuse'" | grep -q 1; then
   log_ok "Database 'langfuse' already present"
 else
   log_warn "Database 'langfuse' missing; creating"
-  docker compose exec -T postgres psql -U "$PGU" -c 'CREATE DATABASE langfuse;'
+  docker compose exec -T postgres createdb -U "$PGU" langfuse
   log_ok "Database 'langfuse' created"
 fi
 
@@ -98,14 +99,21 @@ done
 
 next_step "HTTP probes"
 http_probe() {
-  local url="$1" label="$2"
+  local url="$1" label="$2" timeout="${3:-10}"
   local status
-  status=$(curl -sI "$url" 2>/dev/null | head -n1 || true)
-  if [ -n "$status" ] && echo "$status" | grep -q "HTTP/"; then
-    log_ok "$label reachable ($status)"
-  else
-    log_warn "$label unreachable ($url)"
-  fi
+  for attempt in 1 2 3; do
+    if command -v timeout >/dev/null 2>&1; then
+      status=$(timeout "$timeout" curl -sI "$url" 2>/dev/null | head -n1 || true)
+    else
+      status=$(curl -sI --max-time "$timeout" "$url" 2>/dev/null | head -n1 || true)
+    fi
+    if [ -n "$status" ] && echo "$status" | grep -qE "HTTP/[12]\.[0-9] [23][0-9][0-9]"; then
+      log_ok "$label reachable ($status)"
+      return 0
+    fi
+    [ "$attempt" -lt 3 ] && sleep 2
+  done
+  log_warn "$label unreachable or slow to respond ($url)"
 }
 http_probe "http://localhost:6333" "Qdrant"
 http_probe "http://localhost:8081" "OpenWebUI"
@@ -134,33 +142,67 @@ for svc in postgres qdrant openwebui searxng n8n langfuse-web langfuse-worker; d
   docker compose logs --since=2m "$svc" | tail -n +1 || true
 done
 
-next_step "Monitoring Langfuse migrations"
-if command -v timeout >/dev/null; then
-  if ! timeout 5 docker compose logs -f --since=2m langfuse-worker | egrep -i "migration|ready|listening"; then
-    log_warn "No migration/ready messages captured in last 5s"
+next_step "Monitoring Langfuse initialization"
+log_info "Checking Langfuse services status"
+for svc in langfuse-web langfuse-worker; do
+  state=$(docker compose ps "$svc" --format '{{.State}}' 2>/dev/null | head -n1)
+  if echo "$state" | grep -qi running; then
+    log_ok "$svc is running"
+  else
+    log_warn "$svc state: ${state:-unknown}"
+  fi
+done
+
+if docker compose ps langfuse-worker | grep -q "Up"; then
+  log_info "Monitoring Langfuse worker logs for migration messages (10s)"
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 10 docker compose logs -f langfuse-worker | grep -i "migration\|ready\|listening\|error" || log_info "Migration monitoring window complete"
+  else
+    docker compose logs --since=1m langfuse-worker | tail -n 20
   fi
 else
-  docker compose logs -f --since=2m langfuse-worker | egrep -i "migration|ready|listening" &
-  watcher=$!
-  sleep 5
-  kill "$watcher" 2>/dev/null || true
+  log_warn "Langfuse worker not running – skipping migration monitoring"
 fi
-http_probe "http://localhost:3300" "Langfuse login page"
-log_info "Langfuse UI credentials"
-log_info " user: admin@local"
-log_info " pass: $(grep '^LANGFUSE_INIT_USER_PASSWORD=' .env | cut -d= -f2)"
+
+LF_PORT=$(grep -E '^LANGFUSE_PORT=' .env | cut -d= -f2)
+http_probe "http://localhost:${LF_PORT:-3300}" "Langfuse web interface"
+
+if grep -q '^LANGFUSE_INIT_USER_PASSWORD=' .env; then
+  log_info "Langfuse credentials:"
+  log_info " user: $(grep '^LANGFUSE_INIT_USER_EMAIL=' .env | cut -d= -f2 | head -n1 || echo 'admin@local')"
+  log_info " pass: $(grep '^LANGFUSE_INIT_USER_PASSWORD=' .env | cut -d= -f2 | head -n1)"
+else
+  log_warn "Langfuse user password not present in .env"
+fi
 
 next_step "Checking ClickHouse"
-docker compose exec -T clickhouse clickhouse-client -q "SHOW DATABASES"
-docker compose exec -T clickhouse clickhouse-client -q "SHOW TABLES FROM langfuse"
+if docker compose exec -T clickhouse clickhouse-client -q "SELECT 1" >/dev/null 2>&1; then
+  log_ok "ClickHouse is responding"
+  if docker compose exec -T clickhouse clickhouse-client -q "SHOW DATABASES" | grep -q langfuse; then
+    log_ok "Langfuse database exists in ClickHouse"
+  else
+    log_warn "Langfuse database missing in ClickHouse"
+  fi
+  table_count=$(docker compose exec -T clickhouse clickhouse-client -q "SELECT count() FROM system.tables WHERE database='langfuse'" 2>/dev/null || echo "0")
+  log_info "Langfuse ClickHouse database currently has ${table_count} tables"
+else
+  log_error "ClickHouse is not responding"
+fi
 
 next_step "Checking Postgres Langfuse database"
 docker compose exec -T postgres psql -U "$PGU" -lqt | grep -w langfuse || log_warn "Langfuse DB missing"
 
-next_step "Inspecting OpenWebUI keys"
+next_step "Inspecting OpenWebUI configuration"
 CID=$(docker compose ps -q openwebui)
 if [ -n "$CID" ]; then
-  docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$CID" | egrep '^(VECTOR_DB|RAG_VECTOR_DB|QDRANT_URI|LANGFUSE_(HOST|PUBLIC_KEY|SECRET_KEY))='
+  log_info "OpenWebUI environment variables (core RAG settings):"
+  docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$CID" | egrep '^(VECTOR_DB|RAG_VECTOR_DB|QDRANT_URI|OLLAMA_BASE_URL)='
+  if docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$CID" | grep -q "LANGFUSE_"; then
+    log_ok "Langfuse integration detected in OpenWebUI"
+    docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$CID" | grep "LANGFUSE_"
+  else
+    log_info "No Langfuse integration variables found in OpenWebUI (optional)"
+  fi
 else
   log_warn "OpenWebUI container not running"
 fi
@@ -170,6 +212,34 @@ curl -s http://localhost:6333/collections | jq .
 
 next_step "Reviewing SearxNG hints"
 docker compose logs --since=2m searxng | grep -i 'settings.yml.new' || log_info "No new SearxNG warnings"
+
+next_step "Final health summary"
+services="qdrant openwebui searxng postgres n8n clickhouse langfuse-web langfuse-worker"
+running_count=0
+total_count=0
+for svc in $services; do
+  total_count=$((total_count + 1))
+  state=$(docker compose ps "$svc" --format '{{.State}}' 2>/dev/null | head -n1)
+  if echo "$state" | grep -qi running; then
+    running_count=$((running_count + 1))
+  else
+    log_warn "$svc state: ${state:-unknown}"
+  fi
+done
+log_info "Service status: ${running_count}/${total_count} services running"
+
+if [ "$running_count" -eq "$total_count" ]; then
+  log_ok "🎉 FlowTech-AI stack is fully operational"
+  log_info "Access URLs:"
+  log_info "  • OpenWebUI: http://localhost:$(grep -E '^OPENWEBUI_PORT=' .env | cut -d= -f2 | head -n1 || echo '8081')"
+  log_info "  • Langfuse:  http://localhost:$(grep -E '^LANGFUSE_PORT=' .env | cut -d= -f2 | head -n1 || echo '3300')"
+  log_info "  • n8n:       http://localhost:$(grep -E '^N8N_PORT=' .env | cut -d= -f2 | head -n1 || echo '5678')"
+  log_info "  • SearxNG:   http://localhost:$(grep -E '^SEARXNG_PORT=' .env | cut -d= -f2 | head -n1 || echo '8082')"
+elif [ "$running_count" -gt $(( total_count / 2 )) ]; then
+  log_warn "⚠️  Most services are running, but some issues were detected"
+else
+  log_error "❌ Multiple services are down – review the logs above"
+fi
 
 log_ok "Diagnostics complete"
 log_info "Full log saved to $log_file"

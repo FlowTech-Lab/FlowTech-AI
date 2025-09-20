@@ -32,6 +32,22 @@ putenv_if_missing() {
   grep -qE "^${key}=" .env 2>/dev/null || echo "${key}=${value}" >> .env
 }
 
+wait_for_service() {
+  local service="$1"
+  local command="$2"
+  local timeout="${3:-60}"
+  log_info "Waiting for ${service} to be ready (timeout: ${timeout}s)"
+  for i in $(seq 1 "$timeout"); do
+    if eval "$command" >/dev/null 2>&1; then
+      log_ok "${service} is ready"
+      return 0
+    fi
+    sleep 1
+  done
+  log_warn "${service} not ready after ${timeout}s"
+  return 1
+}
+
 # -------- Styling ----------------------------------------------------------
 BOLD="\033[1m"
 GREEN="\033[32m"
@@ -43,7 +59,7 @@ log_info() { printf "%b[INFO ]%b %s\n" "$CYAN" "$RESET" "$*"; }
 log_ok()   { printf "%b[ OK  ]%b %s\n" "$GREEN" "$RESET" "$*"; }
 log_warn() { printf "%b[WARN ]%b %s\n" "$YELLOW" "$RESET" "$*"; }
 
-TOTAL_STEPS=8
+TOTAL_STEPS=9
 STEP=0
 next_step() {
   STEP=$((STEP + 1))
@@ -68,6 +84,12 @@ umask 077
 log_info "Ensuring .env exists"
 touch .env
 
+if ! docker info >/dev/null 2>&1; then
+  log_warn "Current user cannot access Docker. Add to docker group and re-login:"
+  log_warn "  sudo usermod -aG docker $USER && newgrp docker"
+  exit 1
+fi
+
 if [ "${INIT_PULL:-yes}" != "no" ]; then
   log_info "Pulling latest container images (set INIT_PULL=no to skip)"
   docker compose pull
@@ -77,11 +99,48 @@ fi
 next_step "Preparing data directories"
 uid="$(id -u)"
 gid="$(id -g)"
-mkdir -p ./AI_Data/{openwebui,pgdata,n8n,searxng,qdrant,clickhouse}
-chown -R "$uid:$gid" ./AI_Data 2>/dev/null || true
-find ./AI_Data -type d -exec chmod 700 {} + 2>/dev/null || true
-find ./AI_Data -type f -exec chmod 600 {} + 2>/dev/null || true
+
+# Application data directories (exclude pgdata which is owned by postgres)
+mkdir -p ./AI_Data/{openwebui,n8n,searxng,qdrant,clickhouse}
+chown -R "$uid:$gid" ./AI_Data/{openwebui,n8n,searxng,qdrant,clickhouse} 2>/dev/null || true
+find ./AI_Data/{openwebui,n8n,qdrant,clickhouse} -type d -exec chmod 700 {} + 2>/dev/null || true
+find ./AI_Data/{openwebui,n8n,qdrant,clickhouse} -type f -exec chmod 600 {} + 2>/dev/null || true
+# SearxNG must stay readable by the container entrypoint
+find ./AI_Data/searxng -type d -exec chmod 755 {} + 2>/dev/null || true
+find ./AI_Data/searxng -type f -exec chmod 644 {} + 2>/dev/null || true
+
+# PostgreSQL init scripts directory – readable by postgres (UID 70)
+INIT_DIR="./AI_Data/postgres-init"
+mkdir -p "$INIT_DIR"
+if chown root:root "$INIT_DIR" 2>/dev/null; then
+  chmod 755 "$INIT_DIR"
+else
+  log_warn "Unable to chown $INIT_DIR to root:root; ensure Docker adjusts permissions"
+  chmod 755 "$INIT_DIR" 2>/dev/null || true
+fi
+
+# PostgreSQL data directory – let postgres own files on first start
+PGDATA_DIR="./AI_Data/pgdata"
+mkdir -p "$PGDATA_DIR"
+chmod 700 "$PGDATA_DIR" 2>/dev/null || true
+
+# Seed init script for PostgreSQL (executed only on first cluster init)
+INIT_SQL="$INIT_DIR/01-create-langfuse.sql"
+if [ ! -f "$INIT_SQL" ]; then
+  log_info "Writing PostgreSQL init script for langfuse database"
+  cat > "$INIT_SQL" <<'EOSQL'
+SELECT 'CREATE DATABASE langfuse'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'langfuse')\gexec
+EOSQL
+  chmod 644 "$INIT_SQL"
+fi
+
 log_ok "AI_Data folders ready with secure permissions"
+
+available_space=$(df -Pk . | tail -1 | awk '{print $4}')
+if [ "${available_space:-0}" -lt 2097152 ]; then
+  log_warn "Less than 2GB of free disk space detected; at least 5GB is recommended"
+fi
 
 # Step 3: SearxNG configuration
 next_step "Syncing SearxNG configuration"
@@ -118,6 +177,8 @@ ensure_env LANGFUSE_PORT "3300"
 ensure_env LANGFUSE_EXTERNAL_URL "http://localhost:3300"
 enforce_env LANGFUSE_HOST "http://langfuse:3000"
 ensure_env LANGFUSE_TRACING_ENVIRONMENT "dev"
+ensure_env LANGFUSE_INIT_PROJECT_RETENTION "30"
+ensure_env TZ "Europe/Paris"
 log_ok "Core environment variables present"
 
 # Step 5: Langfuse core secrets & DB URL
@@ -205,32 +266,70 @@ CHENV
 chmod 600 .env
 log_ok "CLICKHOUSE_* variables refreshed"
 
-# Step 8: Provision ClickHouse schema
-next_step "Provisioning ClickHouse"
-log_info "Starting ClickHouse container"
-docker compose up -d clickhouse
-ready=false
-for i in {1..60}; do
-  if docker compose exec -T clickhouse clickhouse-client -q "SELECT 1" >/dev/null 2>&1; then
-    ready=true
-    break
-  fi
-  sleep 10
-done
-if ! $ready; then
-  log_warn "Unable to reach ClickHouse client within 60s"
+# Step 8: Provision ClickHouse and PostgreSQL
+next_step "Provisioning ClickHouse and PostgreSQL"
+log_info "Starting ClickHouse and PostgreSQL containers"
+mkdir -p logs
+if docker compose up -d --wait clickhouse postgres 2>/dev/null; then
+  log_ok "Containers reported healthy via docker compose --wait"
 else
-  log_ok "ClickHouse responded"
+  log_warn "docker compose --wait unsupported or failed; falling back to manual readiness checks"
+  docker compose up -d clickhouse postgres
+fi
+
+log_info "Tailing PostgreSQL logs during initialization"
+docker compose logs -f postgres > logs/postgres-init.log 2>&1 &
+LOG_PID=$!
+
+wait_for_service "ClickHouse" "docker compose exec -T clickhouse clickhouse-client -q 'SELECT 1'" 60 || true
+wait_for_service "PostgreSQL" "docker compose exec -T postgres pg_isready -U '$(getenv_value POSTGRES_USER)'" 60 || true
+
+if docker compose exec -T clickhouse clickhouse-client -q "SELECT 1" >/dev/null 2>&1; then
   PW="$(getenv_value CLICKHOUSE_PASSWORD)"
   docker compose exec -T clickhouse clickhouse-client -q "CREATE DATABASE IF NOT EXISTS langfuse"
   docker compose exec -T clickhouse clickhouse-client -q "CREATE USER IF NOT EXISTS langfuse IDENTIFIED BY '${PW}'"
   docker compose exec -T clickhouse clickhouse-client -q "GRANT ALL ON langfuse.* TO langfuse"
   log_ok "Langfuse schema and user configured in ClickHouse"
+else
+  log_warn "Skipping ClickHouse schema provisioning (service unavailable)"
 fi
- sleep 5
-log_info "Stopping ClickHouse container"
-docker compose stop clickhouse >/dev/null 2>&1 || true
-docker compose rm -f clickhouse >/dev/null 2>&1 || true
+
+PGU="$(getenv_value POSTGRES_USER)"
+[ -z "$PGU" ] && PGU="n8n"
+if docker compose exec -T postgres psql -U "$PGU" -tc "SELECT 1 FROM pg_database WHERE datname='langfuse'" | grep -q 1; then
+  log_ok "PostgreSQL database 'langfuse' already exists"
+else
+  log_warn "PostgreSQL database 'langfuse' missing; executing init script"
+  if docker compose exec -T postgres psql -U "$PGU" -d postgres -a -e -f /docker-entrypoint-initdb.d/01-create-langfuse.sql >/dev/null 2>&1; then
+    log_ok "Init script executed"
+  else
+    log_warn "Failed to run PostgreSQL init script"
+  fi
+  if docker compose exec -T postgres psql -U "$PGU" -tc "SELECT 1 FROM pg_database WHERE datname='langfuse'" | grep -q 1; then
+    log_ok "PostgreSQL database 'langfuse' confirmed"
+  else
+    log_warn "Database 'langfuse' still missing; inspect PostgreSQL logs"
+  fi
+fi
+
+log_info "Stopping temporary services"
+if kill "$LOG_PID" 2>/dev/null; then
+  wait "$LOG_PID" 2>/dev/null || true
+fi
+docker compose stop clickhouse postgres >/dev/null 2>&1 || true
+docker compose rm -f clickhouse postgres >/dev/null 2>&1 || true
+
+# Step 9: final validation
+next_step "Validating environment configuration"
+required_vars="POSTGRES_PASSWORD LANGFUSE_NEXTAUTH_SECRET LANGFUSE_SALT LANGFUSE_ENCRYPTION_KEY CLICKHOUSE_PASSWORD"
+for var in $required_vars; do
+  value=$(getenv_value "$var")
+  if [ -z "$value" ]; then
+    log_warn "Missing required variable: $var"
+    exit 1
+  fi
+done
+log_ok "All required critical environment variables are set"
 
 log_ok "Environment prepared"
 log_info "Next steps: run 'docker compose up -d' then './checklog.sh' to verify the stack"
