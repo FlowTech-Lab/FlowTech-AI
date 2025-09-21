@@ -1,191 +1,208 @@
-# 📌 Cahier des charges – IA personnelle FlowTech
+# 📌 Technical Specifications - FlowTech-AI
 
-## 1. Vision & finalité
-- **Objectif principal** : disposer d’une IA locale capable d’assister FlowTech sur les sujets FPV, infrastructure, automatisation et documentation.
-- **Usage** : strictement privé, exécution locale par défaut ; recours ponctuel au cloud (RTX 4070 Super) uniquement après validation.
-- **Interface maître** : OpenWebUI pour la conversation (pipeline activé) ; n8n opère en hub multi-interfaces (Discord, Telegram, site) et orchestre les tâches longues.
-- **Capacités attendues** : plans d’action, résumés (PDF, logs, incidents), fiches techniques, propositions d’automatisation, génération Markdown exportable (Nextcloud, GitHub).
-- **Boucle de feedback** : utilisation native du RLHF OpenWebUI (👍/👎) avec exports JSON pour créer des jeux d’entraînement.
-- **Traçabilité** : journal n8n des lectures/écritures, Langfuse pour tracer prompts/latences/erreurs dès la phase Quick Wins, rétention illimitée via résumés périodiques et purge manuelle.
+## 1. Vision & Objectives
+- **Primary Goal**: Deploy a local AI system capable of assisting FlowTech with FPV, infrastructure, automation, and documentation tasks
+- **Usage**: Strictly private, local execution by default; occasional cloud access (RTX 4070 Super) only after validation
+- **Master Interface**: OpenWebUI for conversation (pipeline enabled); n8n operates as multi-interface hub (Discord, Telegram, website) and orchestrates long-running tasks
+- **Expected Capabilities**: Action plans, summaries (PDF, logs, incidents), technical sheets, automation proposals, exportable Markdown generation (Nextcloud, GitHub)
+- **Feedback Loop**: Native OpenWebUI RLHF (👍/👎) with JSON exports to create training datasets
+- **Traceability**: n8n journal of read/write operations, Langfuse for tracing prompts/latencies/errors from Quick Wins phase, unlimited retention via periodic summaries and manual purging
 
-## 2. Architecture & déploiement
-### 2.1 Infrastructure cible
-- **Proxmox** : deux VMs distinctes (Dev/Prod) pour la stack IA, ressources extensibles.
-- **Nextcloud** : reste hébergé sur OpenMediaVault.
-- **GPU** : NVIDIA Container Toolkit opérationnel ; GTX 1660 Ti dédiée à Ollama (prod), RTX 4070 Super mobilisée ponctuellement (routage manuel).
-- **Sauvegardes** : Proxmox Backup Server couvre `./AI_Data/openwebui`, `./AI_Data/n8n`, `./AI_Data/qdrant`, `./AI_Data/pgdata`.
+## 2. Architecture & Deployment
 
-### 2.2 Services & interconnexions
-- **Orchestration** : stack maintenue sur Docker Compose (Kubernetes/k3s non retenu à ce stade).
-- **OpenWebUI** : UI principale, pipelines et RAG natifs activés (`VECTOR_DB=qdrant`, `RAG_VECTOR_DB=qdrant`, `CHAT_HISTORY_LIMIT=20`). OpenWebUI n'écrit pas l'historique de chat dans Qdrant et n'utilise que les collections documents (`docs_public`, `docs_prive`). La mémoire longue des conversations est gérée par n8n dans la collection `convos_long`. Pipelines Python personnalisés pour OCR, ingestion, agents spécialisés.
-- **Ollama** : modèles locaux (`Qwen2.5-7B-Instruct` en défaut, `Llama-3-3B` fallback) ; routage simple, option forcer 7B et délégation GPU externe. Tests des quantifications (`Q4_K_M`, `Q8`) prévus pour Qwen2.5-7B avec mesure des latences P95/P99 via Langfuse ; Triton/FasterTransformers non retenus à ce stade (GPU 1660 Ti).
-- **n8n** : orchestrateur principal, webhooks internes (`/webhook/owui-router`), runners activés, stockage d’état agents dans Postgres pour workflows longue durée.
-- **Qdrant** : mémoire vectorielle (espaces public/safe/privé) ; non exposé, accessible depuis OpenWebUI et n8n via réseau interne. Possibilité d'ajouter Redis ou Memcached si la latence des embeddings devient un point de friction.
-- **Postgres** : base n8n + persistance des états d’agents/pipe, LAN-only.
-- **SearxNG** : moteur de recherche ; exposable via Cloudflare si besoin.
-- **Prometheus/Grafana** : VM existante, export métriques OpenWebUI (HTTP exporter), n8n et Ollama ; alertes routées par n8n vers Discord/Telegram.
-- **Réseau** : exposition minimale via pfSense/Cloudflare Zero Trust (si accès distant) ; allowlist IP entre VMs pour OWUI ⇄ n8n ⇄ Qdrant/Postgres. Keycloak ou Authelia pourront être introduits plus tard si un besoin MFA/SSO apparaît, sans priorité immédiate.
+### 2.1 Target Infrastructure
+- **Proxmox**: Two distinct VMs (Dev/Prod) for AI stack, extensible resources
+- **Nextcloud**: Remains hosted on OpenMediaVault
+- **GPU**: NVIDIA Container Toolkit operational; GTX 1660 Ti dedicated to Ollama (prod), RTX 4070 Super mobilized occasionally (manual routing)
+- **Backups**: Proxmox Backup Server covers `./AI_Data/openwebui`, `./AI_Data/n8n`, `./AI_Data/qdrant`, `./AI_Data/pgdata`
 
-### 2.3 Volumes & environnements
-- Volumes dynamiques co-localisés avec `docker-compose.yml` (`./AI_Data/...`).
-- `.env` distincts Dev/Prod (URL Ollama, secrets, ports, clés webhooks) avec rotation semestrielle.
-- `settings.yml` géré pour SearxNG (limiteur désactivé en local, OCR et DOI configurés).
-- Activation des Pipelines OpenWebUI pour connecter les automatisations aux workflows n8n.
+### 2.2 Services & Interconnections
+- **Orchestration**: Stack maintained on Docker Compose (Kubernetes/k3s not retained at this stage)
+- **OpenWebUI**: Main UI, native pipelines and RAG enabled (`VECTOR_DB=qdrant`, `RAG_VECTOR_DB=qdrant`, `CHAT_HISTORY_LIMIT=20`). OpenWebUI doesn't write chat history to Qdrant and only uses document collections (`docs_public`, `docs_prive`). Long-term conversation memory is managed by n8n in the `convos_long` collection. Custom Python pipelines for OCR, ingestion, specialized agents
+- **Ollama**: Local models (`Qwen2.5-7B-Instruct` default, `Llama-3-3B` fallback); simple routing, option to force 7B and external GPU delegation. Tests of quantizations (`Q4_K_M`, `Q8`) planned for Qwen2.5-7B with P95/P99 latency measurement via Langfuse; Triton/FasterTransformers not retained at this stage (GPU 1660 Ti)
+- **n8n**: Main orchestrator, internal webhooks (`/webhook/owui-router`), runners enabled, agent state storage in Postgres for long-running workflows
+- **Qdrant**: Vector memory (public/safe/private spaces); not exposed, accessible from OpenWebUI and n8n via internal network. Possibility to add Redis or Memcached if embedding latency becomes a friction point
+- **PostgreSQL**: n8n database + agent/pipe state persistence, LAN-only
+- **SearxNG**: Search engine; exposable via Cloudflare if needed
+- **Prometheus/Grafana**: Existing VM, OpenWebUI metrics export (HTTP exporter), n8n and Ollama; alerts routed by n8n to Discord/Telegram
+- **Network**: Minimal exposure via pfSense/Cloudflare Zero Trust (if remote access); IP allowlist between VMs for OWUI ⇄ n8n ⇄ Qdrant/Postgres. Keycloak or Authelia can be introduced later if MFA/SSO need appears, without immediate priority
 
-### 2.4 Multi-agents & pipelines
-- OpenWebUI gère l’ingestion courte (top_k élevé) et délègue à n8n les workflows multi-agents.
-- n8n `Webhook Trigger` + nœuds `Merge` pour agréger les réponses (PDF, infra, FPV) et renvoyer un résultat unifié à l’UI.
-- Stockage des contextes d’agents dans Postgres (nœud Database) pour reprise de conversation et tâches différées.
+### 2.3 Volumes & Environments
+- Dynamic volumes co-located with `docker-compose.yml` (`./AI_Data/...`)
+- Distinct `.env` files for Dev/Prod (Ollama URL, secrets, ports, webhook keys) with semiannual rotation
+- `settings.yml` managed for SearxNG (limiter disabled locally, OCR and DOI configured)
+- OpenWebUI Pipeline activation to connect automations to n8n workflows
 
-### 2.5 Contrôles de conformité
-- OpenWebUI : RAG natif + pipeline activés, historique limité à 20 messages, RBAC activé pour limiter les actions pipelines.
-- Qdrant : ports non exposés, segmentation public/safe/privé, tags par projet (FPV, infra, dev, etc.).
-- n8n : accès LAN, Basic Auth + `WEBHOOK_SECRET`, webhooks signés HMAC et rate-limités.
-- PBS : sauvegarde volumes critiques + tests de restauration trimestriels.
+### 2.4 Multi-Agents & Pipelines
+- OpenWebUI handles short ingestion (high top_k) and delegates to n8n for multi-agent workflows
+- n8n `Webhook Trigger` + `Merge` nodes to aggregate responses (PDF, infra, FPV) and return unified result to UI
+- Agent context storage in Postgres (Database node) for conversation resumption and deferred tasks
 
-### 2.6 Observabilité
-- Langfuse déployé dès la phase Quick Wins pour tracer prompts, latences (P95/P99) et erreurs.
-- Prometheus + Grafana + Loki pour unifier métriques et logs (n8n, OpenWebUI, Ollama) et alimenter les dashboards.
-- Rapport mensuel automatisé via n8n (Markdown/PDF) exporté vers Nextcloud pour suivre performances et incidents.
+### 2.5 Compliance Controls
+- OpenWebUI: Native RAG + pipeline enabled, history limited to 20 messages, RBAC enabled to limit pipeline actions
+- Qdrant: Non-exposed ports, public/safe/private segmentation, tags by project (FPV, infra, dev, etc.)
+- n8n: LAN access, Basic Auth + `WEBHOOK_SECRET`, HMAC-signed webhooks and rate-limited
+- PBS: Critical volume backup + quarterly restoration tests
 
-## 3. Gestion des fichiers & données
-### 3.1 Priorités de vectorisation
-- **In** : Markdown, PDF, JSON/YAML (Betaflight, configs infra), logs texte (Blackbox, systèmes FPV).
-- **Out** : code source complet, vidéos, binaires firmware (stockage sans vectorisation).
+### 2.6 Observability
+- Langfuse deployed from Quick Wins phase to trace prompts, latencies (P95/P99) and errors
+- Prometheus + Grafana + Loki to unify metrics and logs (n8n, OpenWebUI, Ollama) and feed dashboards
+- Monthly automated report via n8n (Markdown/PDF) exported to Nextcloud to track performance and incidents
+
+## 3. File & Data Management
+
+### 3.1 Vectorization Priorities
+- **In**: Markdown, PDF, JSON/YAML (Betaflight, infra configs), text logs (Blackbox, FPV systems)
+- **Out**: Complete source code, videos, firmware binaries (storage without vectorization)
 
 ### 3.2 Ingestion & OCR
-- **Pipeline OpenWebUI** : ingestion directe (OCR + embeddings) des documents déposés dans les dossiers surveillés, top_k élevé pour réponses rapides.
-- **Tâche n8n planifiée** : scan nocturne des nouveaux fichiers → pré-embeddings lourds (PDF volumineux) pour soulager les requêtes runtime.
-- **OCR** : Tesseract/OCRmyPDF déclenchés via pipeline OpenWebUI ou agent n8n selon le scénario, rapport d’ingestion renvoyé à l’UI.
+- **OpenWebUI Pipeline**: Direct ingestion (OCR + embeddings) of documents dropped in monitored folders, high top_k for fast responses
+- **Scheduled n8n Task**: Nightly scan of new files → heavy pre-embeddings (large PDFs) to relieve runtime queries
+- **OCR**: Tesseract/OCRmyPDF triggered via OpenWebUI pipeline or n8n agent depending on scenario, ingestion report returned to UI
 
-### 3.3 Organisation & édition
-- Mode hybride :
-  - Dossiers « safe » → écriture directe (OpenWebUI pipeline ou n8n).
-  - Dossiers sensibles → flux diff → approbation Discord/OpenWebUI → écriture.
-- Organisation automatique (tagging/renommage) prise en charge par pipeline n8n lors de la phase Knowledge & Mémoire.
-- Espaces Nextcloud : `/FPV_Public/` (vectorisation auto), `/FPV_Privé/` (vectorisation manuelle, exclusions explicites).
+### 3.3 Organization & Editing
+- Hybrid mode:
+  - "Safe" folders → direct writing (OpenWebUI pipeline or n8n)
+  - Sensitive folders → diff flow → Discord/OpenWebUI approval → writing
+- Automatic organization (tagging/renaming) handled by n8n pipeline during Knowledge & Memory phase
+- Nextcloud spaces: `/FPV_Public/` (auto-vectorization), `/FPV_Privé/` (manual vectorization, explicit exclusions)
 
-### 3.4 Reporting & suivi
-- n8n génère un rapport mensuel (Markdown/PDF) récapitulant nouveaux documents, embeddings créés et erreurs d’ingestion → export Nextcloud.
+### 3.4 Reporting & Monitoring
+- n8n generates monthly report (Markdown/PDF) summarizing new documents, created embeddings and ingestion errors → Nextcloud export
 
-## 4. Intelligence & workflows IA
-### 4.1 Mémoire & RAG
-- **OpenWebUI** : mémoire courte (20 messages) + RAG natif (top_k adaptable) avec heuristiques pipelines ; RLHF intégré pour affiner les réponses.
-- **Qdrant** : mémoire longue, segmentation par projet et sensibilité ; tags pour retrouver les conversations et sources. Weaviate multimodal pourra être évalué si un besoin vision+texte apparaît.
-- **n8n** : déclenche le RAG long (top_k réduit, filtres par tags) lorsque l’heuristique pipeline indique un besoin contexte étendu.
+## 4. AI Intelligence & Workflows
 
-### 4.2 Orchestration multi-agents
-- Orchestration pipe n8n :
-  1. Agent principal (router) reçoit la requête OpenWebUI via webhook.
-  2. Agents spécialisés (PDF/log summary, monitoring infra, tuning FPV, recherche SearxNG) exécutent en parallèle.
-  3. Nœud `Merge` assemble les réponses, ajoute les sources utilisées, renvoie à OpenWebUI.
-- Persistance de l’état agent dans Postgres pour workflows longue durée (ex : backtest Freqtrade, analyse logs lourds).
-- Possibilité d’imbriquer MCP si besoin futur, mais pipe prioritaire pour flexibilité de contexte isolé.
+### 4.1 Memory & RAG
+- **OpenWebUI**: Short memory (20 messages) + native RAG (adaptable top_k) with pipeline heuristics; integrated RLHF to refine responses
+- **Qdrant**: Long memory, segmentation by project and sensitivity; tags to retrieve conversations and sources. Weaviate multimodal can be evaluated if vision+text need appears
+- **n8n**: Triggers long RAG (reduced top_k, tag filters) when pipeline heuristic indicates extended context need
 
-### 4.3 Feedback & amélioration
-- RLHF OpenWebUI alimente un dataset exportable ; n8n consigne le feedback dans Qdrant (tag « feedback ») sans modification automatique des scores.
-- Pipeline de test automatique (n8n) pour rejouer des prompts critiques et valider les agents après mise à jour.
+### 4.2 Multi-Agent Orchestration
+- n8n pipeline orchestration:
+  1. Main agent (router) receives OpenWebUI request via webhook
+  2. Specialized agents (PDF/log summary, infra monitoring, FPV tuning, SearxNG search) execute in parallel
+  3. `Merge` node assembles responses, adds used sources, returns to OpenWebUI
+- Agent state persistence in Postgres for long-running workflows (ex: Freqtrade backtest, heavy log analysis)
+- Possibility to embed MCP if future need, but pipeline priority for isolated context flexibility
 
-### 4.4 Traçabilité & monitoring
-- Langfuse déployé dès Quick Wins : collecte prompts, latences, erreurs, sources RAG.
-- n8n produit un rapport mensuel (Markdown + export PDF) avec temps de réponse, erreurs, sources RAG, feedbacks.
-- Alertes n8n → Discord/Telegram : dépassement de latence, échec pipelines, sources indisponibles.
+### 4.3 Feedback & Improvement
+- OpenWebUI RLHF feeds exportable dataset; n8n records feedback in Qdrant (tag "feedback") without automatic score modification
+- Automatic test pipeline (n8n) to replay critical prompts and validate agents after update
 
-## 5. Sécurité & accès
-### 5.1 Exposition & authentification
-- Pas de SSO (Traefik/Authelia retirés) ; auth native + RBAC OpenWebUI activé obligatoirement dès le déploiement (rôles Admin/Editor/User).
-- OpenWebUI & n8n derrière Cloudflare Zero Trust uniquement si accès distant ; sinon LAN-only.
-- SearxNG : exposé via Cloudflare si usage externe, sinon LAN.
-- Grafana/Prometheus : LAN par défaut ; accès restreint par firewall.
-- Discord : canal d’approbation (rôle `Approver`) + notifications incidents.
+### 4.4 Traceability & Monitoring
+- Langfuse deployed from Quick Wins: collects prompts, latencies, errors, RAG sources
+- n8n produces monthly report (Markdown + PDF export) with response time, errors, RAG sources, feedback
+- n8n alerts → Discord/Telegram: latency exceeded, pipeline failure, unavailable sources
 
-### 5.2 Gestion des secrets
-- Secrets dans `.env` chiffrés, sauvegardés dans PBS ; rotation semestrielle automatisée par rappel n8n.
-- Masquage automatique (nœuds Code n8n) avant log ou stockage pour toute PII/clé/secret ; interdiction d’insérer secrets dans prompts.
+## 5. Security & Access
 
-### 5.3 Validation & durcissement
-- Flux critique : OpenWebUI → pipeline → n8n → Discord Approve/Reject → exécution.
-- Actions couvertes : modifications fichiers sensibles, snapshots/reboots, déploiements, automatisations destructrices.
-- Webhooks n8n : obligatoirement LAN-only, signés HMAC et protégés par un rate-limit de 20 req/min/IP, avec purge automatique de l’historique conversationnel au-delà de 20 échanges.
-- Community Leaderboard : activée uniquement pour admins afin de vérifier la qualité des réponses avant diffusion.
-- Mises à jour : patch mensuel conteneurs, revue trimestrielle dépendances et pipelines personnalisés.
+### 5.1 Exposure & Authentication
+- No SSO (Traefik/Authelia removed); native auth + OpenWebUI RBAC enabled mandatory from deployment (Admin/Editor/User roles)
+- OpenWebUI & n8n behind Cloudflare Zero Trust only if remote access; otherwise LAN-only
+- SearxNG: exposed via Cloudflare if external usage, otherwise LAN
+- Grafana/Prometheus: LAN by default; restricted access by firewall
+- Discord: approval channel (role `Approver`) + incident notifications
 
-### 5.4 Journalisation
-- n8n : log qui/quoi/quand + payload minimal (rétention 90 jours).
-- OpenWebUI : prompts/outputs court terme ; résumés envoyés dans Qdrant (texte nettoyé).
-- Langfuse : audit complet des prompts, latences, sources RAG.
+### 5.2 Secret Management
+- Secrets in encrypted `.env`, backed up in PBS; semiannual rotation automated by n8n reminder
+- Automatic masking (n8n Code nodes) before logging or storage for any PII/key/secret; prohibition of inserting secrets in prompts
 
-## 6. Intégrations FlowTech
+### 5.3 Validation & Hardening
+- Critical flow: OpenWebUI → pipeline → n8n → Discord Approve/Reject → execution
+- Covered actions: sensitive file modifications, snapshots/reboots, deployments, destructive automations
+- n8n webhooks: mandatory LAN-only, HMAC-signed and protected by 20 req/min/IP rate-limit, with automatic conversation history purge beyond 20 exchanges
+- Community Leaderboard: enabled only for admins to verify response quality before diffusion
+- Updates: monthly container patches, quarterly dependency and custom pipeline review
+
+### 5.4 Logging
+- n8n: logs who/what/when + minimal payload (90-day retention)
+- OpenWebUI: short-term prompts/outputs; summaries sent to Qdrant (cleaned text)
+- Langfuse: complete prompt audit, latencies, RAG sources
+
+## 6. FlowTech Integrations
+
 ### 6.1 Nextcloud
-- Répertoires `/FPV_Public/` et `/FPV_Privé/` avec webhooks vers OpenWebUI pipeline et n8n.
-- Vectorisation sélective (auto vs manuel) + reporting ingestion mensuel.
+- `/FPV_Public/` and `/FPV_Privé/` directories with webhooks to OpenWebUI pipeline and n8n
+- Selective vectorization (auto vs manual) + monthly ingestion reporting
 
 ### 6.2 Proxmox
-- n8n lit l’état VM (CPU/RAM/disk) et planifie snapshots ; exécution après approbation Discord.
-- Pipeline incidents : alertes Prometheus → n8n → résumé IA → Discord.
+- n8n reads VM state (CPU/RAM/disk) and schedules snapshots; execution after Discord approval
+- Incident pipeline: Prometheus alerts → n8n → AI summary → Discord
 
-### 6.3 Docker & services
-- n8n fournit la vue conteneurs/logs, redémarrages sur approbation.
-- Export Grafana/Prometheus : dashboards unifiés, résumés incidents via n8n.
+### 6.3 Docker & Services
+- n8n provides container/logs view, restarts on approval
+- Grafana/Prometheus export: unified dashboards, incident summaries via n8n
 
-### 6.4 FPV & projets spécifiques
-- **Flow Tuning FPV** : pipeline complet (upload Blackbox → pipeline OpenWebUI OCR/RAG → agent n8n tuning → rapport Markdown).
-- **Trading-LAB (Freqtrade)** : déclenché après stabilisation (agents pour lancer backtests, analyser résultats, recommandations).
-- **Autres projets (EUC, archery, ARK, etc.)** : documentation + alertes simples via pipelines dédiés.
-- **Journal infra** : n8n génère un wiki Markdown des changements (VM, Docker, services) stocké Nextcloud/GitHub.
+### 6.4 FPV & Specific Projects
+- **Flow Tuning FPV**: Complete pipeline (Blackbox upload → OpenWebUI OCR/RAG pipeline → n8n tuning agent → Markdown report)
+- **Trading-LAB (Freqtrade)**: Triggered after stabilization (agents to launch backtests, analyze results, recommendations)
+- **Other projects (EUC, archery, ARK, etc.)**: Documentation + simple alerts via dedicated pipelines
+- **Infra journal**: n8n generates wiki Markdown of changes (VM, Docker, services) stored Nextcloud/GitHub
 
-## 7. Plan de déploiement & roadmap
-### Étape 1 – Quick Wins (Jours 0–30)
-- Activer le RAG natif & les pipelines OpenWebUI (OCR, ingestion, RLHF).
-- Brancher Langfuse, pipe OpenWebUI ⇄ n8n (agents PDF, mail, logs).
-- Configurer le multi-agent n8n (Webhook → Merge → retour UI) et valider le flux résumé doc.
-- Mettre en place les répertoires Nextcloud (`/FPV_Public/`, `/FPV_Privé/`) + vectorisation de base.
+## 7. Deployment Plan & Roadmap
 
-### Étape 2 – Ops & Infra (Mois 2)
-- Automatiser snapshots Proxmox & reporting infra (n8n → Discord).
-- Ingestion nocturne OCR + embeddings lourds via agents n8n.
-- Alertes systèmes (Proxmox/Docker) résumées par pipeline IA ; validation d’actions critiques Discord opérationnelle.
+### Step 1 – Quick Wins (Days 0–30)
+- Enable native RAG & OpenWebUI pipelines (OCR, ingestion, RLHF)
+- Connect Langfuse, OpenWebUI ⇄ n8n pipeline (PDF, mail, log agents)
+- Configure n8n multi-agent (Webhook → Merge → UI return) and validate document summary flow
+- Set up Nextcloud directories (`/FPV_Public/`, `/FPV_Privé/`) + basic vectorization
 
-### Étape 3 – Knowledge & Mémoire (Mois 3)
-- Wiki infra auto-généré (Markdown) alimenté par n8n + publication GitHub/Nextcloud.
-- Tagging/renommage automatisé des nouveaux docs ; segmentation fine Qdrant par projet/sensibilité.
-- Feedback IA logué et exploitable pour futurs fine-tuning ; rapport mensuel Langfuse → Nextcloud.
+### Step 2 – Ops & Infra (Month 2)
+- Automate Proxmox snapshots & infra reporting (n8n → Discord)
+- Nightly OCR ingestion + heavy embeddings via n8n agents
+- System alerts (Proxmox/Docker) summarized by AI pipeline; critical action validation Discord operational
 
-### Étape 4 – Spécialisations (>3 mois)
-- Pipeline complet Flow Tuning FPV (analyse PID, recommandations).
-- Monitoring complet : Prometheus/Grafana raccordés, alertes enrichies via n8n.
-- Passage de 1 agent n8n à 3–5 agents spécialisés (résumé, recherche, analyse, tuning, monitoring).
-- Agents semi-autonomes capables d’enchaîner plusieurs actions validées.
+### Step 3 – Knowledge & Memory (Month 3)
+- Auto-generated infra wiki (Markdown) fed by n8n + GitHub/Nextcloud publication
+- Automated tagging/renaming of new docs; fine Qdrant segmentation by project/sensitivity
+- AI feedback logged and exploitable for future fine-tuning; monthly Langfuse report → Nextcloud
 
-### Étape 5 – Expérimentation avancée
-- Intégration Trading-LAB (backtests, analyse IA).
-- Extension multi-interfaces (Telegram, WhatsApp) via pipelines n8n.
-- Optimisation continue via RLHF + Langfuse (dataset d’entraînement, ajustement heuristiques).
+### Step 4 – Specializations (>3 months)
+- Complete Flow Tuning FPV pipeline (PID analysis, recommendations)
+- Complete monitoring: Prometheus/Grafana connected, alerts enriched via n8n
+- Transition from 1 n8n agent to 3–5 specialized agents (summary, search, analysis, tuning, monitoring)
+- Semi-autonomous agents capable of chaining multiple validated actions
 
-## 8. Services & priorisation
-Les services d’expérimentation (Flowise, Neo4j, Vault, etc.) restent optionnels et ne seront activés qu’après stabilisation de Langfuse, RBAC et HMAC.
-| Priorité | Service | Usage principal |
-|----------|---------|-----------------|
-| 1 | Qdrant | Mémoire vectorielle & recherche sémantique |
-| 2 | OpenWebUI Pipelines | OCR, ingestion, agents spécialisés |
-| 3 | Whisper | Transcription audio → texte |
-| 4 | Piper | Synthèse vocale |
-| 5 | ComfyUI | Génération d’images IA locale |
-| 6 | Nextcloud | Stockage fichiers, logs, configs |
-| 7 | n8n | Orchestration workflows & multi-agents |
-| 8 | Postgres | Persistance n8n + états agents |
-| 9 | Redis | Cache & files d’attente simples |
-| 10 | Prometheus + Grafana | Monitoring & alerting |
-| 11 | Langfuse | Traçage prompts, métriques, visualisation |
-| 12 | Traefik / NGINX | Reverse proxy, TLS automatique (option Zero Trust) |
-| 13 | Vault | Gestion centralisée des secrets (évolution) |
-| 14 | Supabase | Backend Postgres managé + Auth + Vector store |
-| 15 | Neo4j | Graphe de connaissances |
-| 16 | Flowise | Éditeur low-code de pipelines RAG |
-| 17 | Tesseract.js (via n8n) | OCR (docs techniques, schémas) |
-| 18 | Nodes de scraping (Apify, …) | Collecte auto de docs techniques |
-| 19 | RabbitMQ / Kafka | Orchestration robuste & files d’attente |
+### Step 5 – Advanced Experimentation
+- Trading-LAB integration (backtests, AI analysis)
+- Multi-interface extension (Telegram, WhatsApp) via n8n pipelines
+- Continuous optimization via RLHF + Langfuse (training dataset, heuristic adjustment)
+
+## 8. Services & Prioritization
+
+### Recommended and Prioritized Stack
+
+#### Phase 1 - Core Stack (Immediate Deployment)
+| Priority | Service | Justification | Status |
+|----------|---------|---------------|--------|
+| 1 | **Ollama** (external) | CRITICAL - Local LLM engine required for entire system | ✅ Installed |
+| 2 | **Qdrant** | Central vector memory for RAG and agents | ✅ Operational |
+| 3 | **PostgreSQL** | Database for n8n + agent states | ✅ Operational |
+| 4 | **OpenWebUI** | Main interface + pipelines | ✅ Operational |
+| 5 | **n8n** | Central multi-agent orchestrator | ✅ Operational |
+| 6 | **Langfuse** | Mandatory traceability from start (Quick Wins) | ✅ Operational |
+
+#### Phase 2 - Support Services (Weeks 2-4)
+| Priority | Service | Usage | Status |
+|----------|---------|-------|--------|
+| 7 | **Redis** | Embedding cache + n8n queues | ✅ Operational |
+| 8 | **ClickHouse** | Analytics database | ✅ Operational |
+| 9 | **MinIO** | S3-compatible storage | ✅ Operational |
+| 10 | **SearxNG** | Web search for agents | ✅ Operational |
+
+#### Phase 3 - Specializations (Months 2-3)
+| Priority | Service | Specialized Usage | Status |
+|----------|---------|------------------|--------|
+| 11 | **Whisper** | Audio transcription for workflows | 🔄 To implement |
+| 12 | **Tesseract/OCR** | Document pipeline (via n8n) | 🔄 To implement |
+| 13 | **Prometheus + Grafana** | Existing infra monitoring | 🔄 To implement |
+
+### Recent Technical Modifications
+- **Langfuse 3.x**: Version compatible with ClickHouse, Redis, and MinIO
+- **Official Configuration**: Based on [Langfuse Official Docker Compose](https://github.com/langfuse/langfuse/blob/main/docker-compose.yml)
+- **Sequential Startup**: Optimized service startup order with health checks
+- **DEV Mode**: Optional complete reset (.env, AI_Data, logs) for development
 
 ---
 
-Ce cahier des charges reflète l’architecture actuelle, les priorités opérationnelles et la roadmap de l’IA personnelle FlowTech. Toute évolution majeure (nouveaux services, exposition externe, automatisations critiques) doit être validée puis consignée dans le wiki infra.
+This technical specification reflects the current architecture, operational priorities, and roadmap of the FlowTech personal AI system. Any major evolution (new services, external exposure, critical automations) must be validated then documented in the infra wiki.
