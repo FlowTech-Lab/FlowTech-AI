@@ -8,14 +8,14 @@ Strengthen foundations first (native RAG, pipelines, traceability) before indust
 - ✅ **Operational core stack** - Qdrant, PostgreSQL, OpenWebUI, n8n, SearxNG functional
 - ✅ **Langfuse integration** - AI observability and tracing operational
 - ✅ **Redis, ClickHouse, MinIO** - Support services operational
-- ⬜ **Enable native RAG + OpenWebUI Pipelines** (OCR, ingestion, RLHF); configure `VECTOR_DB`/`RAG_VECTOR_DB`
+- ✅ **Enable native RAG + OpenWebUI Pipelines** (OCR, ingestion, RLHF); configure `VECTOR_DB`/`RAG_VECTOR_DB`
 - ⬜ **Create data directories aligned with Qdrant**
   - `/AI_Data/docs_public/` → auto-vectorized content (guides, technical docs, general logs) → Qdrant `docs_public`
   - `/AI_Data/docs_prive/` → sensitive files, vectorization only with manual approval → Qdrant `docs_prive`
   - `/AI_Data/convos_long/` → raw storage of long conversations (logging), relayed to Qdrant `convos_long` by n8n
 - ⬜ **Deploy Loki** for collecting n8n/OpenWebUI logs (current stack limited to Prometheus/Grafana on external VM, not connected)
 - ⬜ **Implement HMAC-signed n8n webhooks + OpenWebUI RBAC** (n8n Basic Auth already enabled, but HMAC/Rate-limit/RBAC not documented)
-- ⬜ **Validate "PDF/log summary" pipeline**: OpenWebUI → OCR pipeline → n8n summary agent webhook → UI return
+- ✅ **Validate "PDF/log summary" pipeline**: OpenWebUI → OCR pipeline → n8n summary agent webhook → UI return
 
 ## Step 2 – Orchestration & Security (Month 2)
 - ⬜ **Configure n8n in pipe mode** Qwen3:8B for everything (master, specialist, doc, code, search) DeepSeek-R1 for vector ingestion executed in parallel then merged
@@ -50,7 +50,7 @@ Strengthen foundations first (native RAG, pipelines, traceability) before indust
 - ✅ **Optimized init.sh script**: Sequential startup, DEV mode, error handling, automatic chmod
 - ✅ **Langfuse 3.x**: Installed and operational with ClickHouse, Redis, MinIO integration
 - ✅ **Ollama**: Installed external to stack (192.168.0.2:11434) - CRITICAL for system
-- ⬜ **Native RAG**: To enable in OpenWebUI (VECTOR_DB/Qdrant)
+- ✅ **Native RAG**: Enabled in OpenWebUI (VECTOR_DB/Qdrant)
 - ⬜ **Loki**: To deploy for centralized logging
 - ⬜ **HMAC/RBAC**: To implement (n8n Basic Auth already enabled)
 - ❌ **Removed services**: ClickHouse, ComfyUI, Piper, Vault, Neo4j, Flowise, Supabase, RabbitMQ/Kafka

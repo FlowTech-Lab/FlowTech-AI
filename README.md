@@ -80,6 +80,21 @@ In Admin Panel > Settings > Web Search: `http://searxng:8080/search`
 3. Generate API keys in Project > Settings > API Keys
 4. Configure OpenWebUI pipeline with Langfuse credentials
 
+#### n8n Workflow Setup
+1. **Import the main workflow**:
+   - Access n8n: http://localhost:5678 or IP
+   - Go to Workflows > Import from File
+   - Import `SRC/N8N-openwebui-workflow.json`
+
+2. **Import the N8N Pipe function**:
+   - Go to Settings > Functions
+   - Import `SRC/function-N8N Pipe.json`
+
+3. **Configure OpenWebUI function**:
+   - Access OpenWebUI: http://localhost:8081
+   - Go to Admin Panel > Functions
+   - Add new function with webhook URL: `http://n8n:5678/webhook/invoke_n8n_agent`
+
 ### 🛠️ Troubleshooting
 
 #### Complete Reset
