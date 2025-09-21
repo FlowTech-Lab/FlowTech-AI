@@ -1,181 +1,177 @@
-#FlowTech-AI
+# FlowTech-AI
 
-## Premier démarrage
+## Personal Multi-Agent AI Stack
 
+A comprehensive, locally-deployed AI infrastructure designed for FlowTech's FPV, infrastructure, automation, and documentation needs.
+
+### 🚀 Quick Start
+
+```bash
+chmod +x init.sh
 ./init.sh
-docker compose up -d
+```
 
-Dans Panneau administrateur > Reglages > recherche WEb "http://searxng:8080/search"
+The optimized `init.sh` script automatically handles:
+- ✅ Sequential service startup with proper dependencies
+- ✅ DEV mode with optional complete reset
+- ✅ Error handling and comprehensive logging
+- ✅ Automatic permissions (chmod)
+- ✅ Environment variable configuration
+- ✅ Disk space verification
+- ✅ Docker image pre-pulling
 
+### 📋 Current Stack Status
 
+#### ✅ Operational Services
+- **OpenWebUI** : Main interface + pipelines (http://localhost:8081)
+- **n8n** : Multi-agent orchestrator (http://localhost:5678)
+- **SearxNG** : Web search for agents (http://localhost:8082)
+- **Langfuse** : AI observability and tracing (http://localhost:3300)
+- **Qdrant** : Vector memory for RAG and agents (http://localhost:6333)
+- **PostgreSQL** : Database for n8n + agent states
+- **Redis** : Cache and queue management
+- **ClickHouse** : Analytics database
+- **MinIO** : S3-compatible storage
 
+#### 🔧 External Dependencies
+- **Ollama** : Local LLM engine - **CRITICAL**
 
+### 🏗️ Architecture
 
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   OpenWebUI     │    │      n8n        │    │    SearxNG      │
+│  (Main UI)      │◄──►│ (Orchestrator)  │◄──►│  (Web Search)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│     Qdrant      │    │   PostgreSQL    │    │     Redis       │
+│ (Vector Store)  │    │   (Database)    │    │   (Cache)       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   ClickHouse    │    │     MinIO       │    │    Langfuse     │
+│  (Analytics)    │    │   (Storage)     │    │ (Observability) │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
+### 🔧 Configuration
 
-set -euo pipefail
+#### Network Configuration
+- **External Access**: Use `192.168.0.246` for LAN access
+- **Internal Docker**: Services use container names (e.g., `http://qdrant:6333`)
+- **Local Access**: Use `localhost` when accessing from the same machine
 
-# (re)start Ollama GPU en propre
-docker rm -f ollama >/dev/null 2>&1 || true
-docker run --gpus all -d --restart unless-stopped \
-  -p 11434:11434 -v /opt/ollama:/root/.ollama \
-  --name ollama ollama/ollama:latest
+#### Important Environment Variables
+- **N8N_SECURITY_API_BEARER_AUTH**: Bearer token for n8n webhook authentication
+- **LANGFUSE_INIT_USER_EMAIL**: Admin email for Langfuse
+- **LANGFUSE_INIT_USER_PASSWORD**: Admin password for Langfuse
+- **N8N_BASIC_AUTH_USER**: n8n admin username
+- **N8N_BASIC_AUTH_PASSWORD**: n8n admin password
 
-# 2) Tirer un modèle sûr pour 6 Go VRAM (petit, rapide)
-#docker exec -it ollama ollama pull llama3.2:3b
+#### OpenWebUI Setup
+In Admin Panel > Settings > Web Search: `http://searxng:8080/search`
 
-# Option: tenter un 7B quantisé (peut passer sur 6 Go selon contexte)
-docker exec -it ollama ollama pull qwen2.5:7b
-docker exec -it ollama ollama pull wizard-vicuna-uncensored:7b
-docker exec -it ollama ollama pull huihui_ai/deepseek-r1-abliterated:7b
-docker exec -it ollama ollama pull huihui_ai/qwen2.5-1m-abliterated:7b
-# docker exec -it ollama ollama pull mistral:7b
+#### Langfuse Integration
+1. Access Langfuse: http://localhost:3300
+2. Create account, organization, and project
+3. Generate API keys in Project > Settings > API Keys
+4. Configure OpenWebUI pipeline with Langfuse credentials
 
-# smoke test API locale
-echo '[TEST] generate'
-curl -s http://127.0.0.1:11434/api/generate \
-  -d '{"model":"llama3.2:3b","prompt":"Donne exactement 5 parfums de glace, une puce par ligne, en français.","stream":false}'
+#### n8n Workflow Setup
+1. **Import the main workflow**:
+   - Access n8n: http://localhost:5678 or IP
+   - Go to Workflows > Import from File
+   - Import `SRC/N8N-openwebui-workflow.json`
 
-# IP hôte à utiliser depuis ta VM Ruby/n8n
-echo -e "\n[HOST_IP]"
-hostname -I | awk '{print $1}'
+2. **Import the N8N Pipe function**:
+   - Go to Settings > Functions
+   - Import `SRC/function-N8N Pipe.json`
 
+3. **Configure OpenWebUI function**:
+   - Access OpenWebUI: http://localhost:8081
+   - Go to Admin Panel > Functions
+   - Add new function with webhook URL: `http://n8n:5678/webhook/invoke_n8n_agent`
 
+### 🛠️ Troubleshooting
 
+#### Complete Reset
+```bash
+# Edit init.sh and set DEV_MODE=true
+# Then run:
+chmod +x init.sh
+./init.sh
+```
 
+#### Service Logs
+```bash
+docker compose logs -f [service-name]
+```
 
+#### Health Checks
+```bash
+# Check all services
+curl -s http://localhost:8081  # OpenWebUI
+curl -s http://localhost:5678  # n8n
+curl -s http://localhost:8082  # SearxNG
+curl -s http://localhost:3300  # Langfuse
+curl -s http://localhost:6333  # Qdrant
+```
+### 🌐 Network URLs
 
+#### External Access (LAN)
+- **OpenWebUI**: http://x.x.x.x:8081
+- **n8n**: http://x.x.x.x:5678
+- **SearxNG**: http://x.x.x.x:8082
+- **Langfuse**: http://x.x.x.x:3300
+- **Qdrant**: http://x.x.x.x:6333
+- **MinIO**: http://x.x.x.x:9092
 
+#### Internal Docker Communication
+| Service | Container Name | Internal URL | Port | Usage |
+|---------|----------------|--------------|------|-------|
+| **PostgreSQL** | `flowtech-ai-postgres-1` | `postgres:5432` | 5432 | n8n database |
+| **Redis** | `redis` | `redis:6379` | 6379 | cache and queues |
+| **MinIO** | `minio` | `minio:9000` | 9000 | S3-compatible storage |
+| **ClickHouse** | `clickhouse` | `clickhouse:8123` | 8123 | analytics database |
+| **Qdrant** | `qdrant` | `http://qdrant:6333` | 6333 | vector storage |
+| **Langfuse Worker** | `langfuse-worker` | `langfuse-worker:3030` | 3030 | background processing |
+| **Langfuse Web** | `langfuse-web` | `langfuse-web:3000` | 3000 | web interface |
+| **n8n** | `flowtech-ai-n8n-1` | `n8n:5678` | 5678 | workflow orchestrator |
+| **OpenWebUI** | `flowtech-ai-openwebui-1` | `openwebui:8080` | 8080 | main AI interface |
+| **SearxNG** | `flowtech-ai-searxng-1` | `http://searxng:8080` | 8080 | web search engine |
 
+### 📚 Documentation
 
+- **`docs/spec.md`** : Technical specifications and prioritized stack
+- **`docs/ROADMAP.md`** : Deployment roadmap and priorities
+- **`docs/Agents.md`** : Multi-agent architecture
+- **`docs/TECHNICAL_CHANGES.md`** : Recent technical modifications
 
+### 🔗 External References
 
+This implementation is based on the official Langfuse Docker Compose configuration:
+- **Source**: [Langfuse Official Docker Compose](https://github.com/langfuse/langfuse/blob/main/docker-compose.yml)
+- **Version**: Langfuse 3.x with ClickHouse, Redis, and MinIO integration
 
+### 🎯 Key Features
 
-# 📌 Cahier des Charges – IA Personnelle FlowTech (Mise à jour)
+- **Multi-Agent Orchestration**: n8n-based agent coordination
+- **Vector RAG**: Qdrant-powered document retrieval
+- **AI Observability**: Langfuse tracing and monitoring
+- **Local LLM**: Ollama integration for privacy
+- **Web Search**: SearxNG for real-time information
+- **Persistent Storage**: PostgreSQL + ClickHouse + MinIO
 
-## 1️⃣ **Objectifs & Finalité**  
+### 🔒 Security
 
-### 🎯 **But Principal :**  
-Déployer une **IA personnelle locale** pour assister FlowTech dans ses projets techniques, ses développements et la documentation de ses travaux. L’IA doit être capable de :  
-- ✅ **Assistance technique multi-domaines** : tuning FPV, Proxmox, Docker, réseau, infrastructure, etc.  
-- ✅ **Analyse & organisation de fichiers** : lecture et modification de logs, configurations, code source, documentation technique.  
-- ✅ **Contexte en temps réel** : prendre en compte l’état actuel des systèmes et suggérer des solutions optimales.  
-- ✅ **Planification & exécution** : proposer des plans d’action et les dérouler automatiquement après validation.  
-- ✅ **Apprentissage continu** : mémoriser l’historique des interactions et améliorer ses conseils au fil du temps.  
-- ✅ **Recherche Internet si besoin** : être capable de rechercher des informations en ligne si nécessaire.  
-
-### 👤 **Usage privé** : L’IA est strictement réservée à FlowTech.  
-### ☁️ **Environnement hybride** : Fonctionnement principalement en local, avec utilisation du cloud uniquement si nécessaire.
-
----
-
-## 2️⃣ **Architecture & Déploiement**  
-
-### 💾 **Infrastructure cible :**  
-- **Développement & Tests** : PC Fixe (Windows + WSL) avec GPU **RTX 4070**.  
-- **Production locale** : Serveur **Proxmox** (Linux) avec GPU **GTX 1660 Ti**, hébergeant un conteneur ou VM Docker pour l’IA. Stockage principal sur **Nextcloud (Btrfs)**.  
-- **Cloud (optionnel)** : Utilisation ponctuelle pour des calculs lourds ou des recherches web avancées.
-
-### 🔧 **Technologies principales :**  
-- **Backend IA** : Python (**FastAPI** ou **Flask**) pour orchestrer les composants.  
-- **LLM locaux** : **Ollama** pour héberger des modèles locaux (ex : Mistral 7B/Mixtral, Phi-3, etc.).  
-- **Orchestration & Interface** :  
-  - **Interface principale** : **OpenWebUI** comme UI principale pour converser avec l’IA.  
-  - **Automatisation** : **n8n** pour exécuter les tâches d'automatisation et orchestrer les workflows.  
-- **Mémoire IA & base de connaissance** :  
-  - **ChromaDB** (mémoire vectorielle intégrée à OpenWebUI) pour stocker les connaissances et documents.  
-  - **Weaviate ou Qdrant** (évolution possible si besoin d'une base plus puissante et rapide).  
-- **Stockage des fichiers projet** : **Nextcloud** (serveur de fichiers, logs, configs, code source, etc.).
-
-### 🌐 **Interface utilisateur :**  
-- **Interface Web conversationnelle** via OpenWebUI.  
-- **Mode vocal** (optionnel) pour interaction mains libres.  
-- **Gestion des conversations & mémoire longue durée**.  
-- **Possibilité d’intégrer une API REST** pour des automatisations avancées.
-
----
-
-## 3️⃣ **Gestion des Fichiers & Données**  
-
-### 📂 **Types de fichiers gérés :**  
-- **Configurations techniques** : fichiers Betaflight, Docker, Proxmox, etc.  
-- **Logs système et applicatifs** : serveurs Proxmox, journaux Docker, Nextcloud, etc.  
-- **Documents techniques** : README, Markdown, manuels PDF, JSON/YAML.  
-
-### 🔍 **Accès & modifications :**  
-- **Lecture des fichiers** : via **API WebDAV de Nextcloud**.  
-- **Modification des fichiers** : initialement avec validation manuelle, puis automatisation avec workflows n8n.  
-- **Indexation en temps réel** pour garder la base de connaissances toujours à jour.  
-- **Organisation automatique des fichiers** (tagging, tri, renommage automatisé).  
-
----
-
-## 4️⃣ **Fonctionnalités IA & Apprentissage**  
-
-### 🧠 **Capacités d’apprentissage :**  
-- **Mémoire conversationnelle** : suivi du contexte et adaptation en fonction des échanges passés.  
-- **Apprentissage progressif** : amélioration continue des suggestions en fonction du feedback.  
-- **Stockage long-terme** : via **ChromaDB** et potentiellement **Weaviate/Qdrant** si évolutif.
-
-### 🔍 **Tâches gérées par l’IA :**  
-- **Planification de projets** : structuration et identification des obstacles.  
-- **Optimisation de configurations** : tuning FPV, réglages Docker, Proxmox.  
-- **Dépannage & Debug** : analyse de logs et détection des erreurs.  
-- **Documentation & synthèse** : génération automatique de rapports techniques.  
-
-### 🤖 **Automatisation avancée avec n8n :**  
-- **Déclenchement de workflows** sur base de règles définies.  
-- **Automatisation des tâches courantes** (gestion de fichiers, backup, maintenance serveurs).  
-- **Interaction avec d’autres outils** : Discord, Nextcloud, Grafana, etc.  
-
----
-
-## 5️⃣ **Sécurité & Accès**  
-
-### 🔐 **Contrôle d’accès :**  
-- **Authentification sécurisée** pour OpenWebUI et les API.  
-- **Données privées stockées uniquement en local** (aucune fuite vers le cloud sans validation).  
-- **Logs d’interactions** stockés localement et consultables.  
-
-### 🛡️ **Sécurité opérationnelle :**  
-- **Pas d’accès direct aux systèmes critiques** au départ.  
-- **Toute action critique validée manuellement** avant exécution.  
-- **Mise à jour manuelle du système** pour garder un contrôle total.  
-
----
-
-## 6️⃣ **Intégration avec les Projets FlowTech**  
-
-### 📡 **Écosystème FlowTech :**  
-- **Connexion avec Nextcloud** pour lecture et modification des fichiers.  
-- **Automatisation avancée via n8n** pour exécuter des actions sur Proxmox, Docker, etc.  
-- **Notifications Discord/Telegram** pour suivi des tâches automatisées.  
-- **Interaction avec Grafana et outils de monitoring** pour interprétation des métriques système.  
-
----
-
-## 7️⃣ **Plan de Déploiement & Prochaines Étapes**  
-
-### 📦 **Déploiement initial :**  
-1. **Installation OpenWebUI + ChromaDB** sur le serveur Proxmox.  
-2. **Connexion d’Ollama** pour exécuter un modèle local.  
-3. **Intégration Nextcloud (lecture de fichiers)**.  
-4. **Développement des premiers workflows n8n** pour automatiser des tâches simples.  
-
-### 🚀 **Évolutions futures :**  
-1. **Mise en place de l’édition de fichiers Nextcloud** avec validation manuelle.  
-2. **Optimisation de la mémoire vectorielle** (test de Weaviate/Qdrant si besoin).  
-3. **Déploiement progressif des automatisations avancées** avec agents IA autonomes.  
+- **Local-First**: All services run locally by default
+- **Network Isolation**: Services communicate via internal Docker network
+- **Authentication**: Built-in auth for all web interfaces
+- **Data Persistence**: All data stored in `./AI_Data/` directory
 
 ---
 
-## 📌 **Résumé des mises à jour :**  
-✅ **OpenWebUI comme interface principale**  
-✅ **n8n pour automatiser les actions**  
-✅ **ChromaDB pour la mémoire vectorielle, avec possibilité d’évolution vers Weaviate/Qdrant**  
-✅ **IA capable de modifier les fichiers après validation**  
-✅ **Optimisation progressive avec tests en conditions réelles**  
-
-Avec ce plan, l’IA sera **100% locale, intelligente et évolutive**, répondant aux besoins de FlowTech. 🚀
-
+**FlowTech-AI** - Personal AI infrastructure, automation, and documentation
