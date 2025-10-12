@@ -4,40 +4,40 @@ set -euo pipefail
 # =============================================================================
 # FlowTech-AI Initialization Script - Optimized Version
 # =============================================================================
-# Script d'initialisation optimisé qui utilise les fichiers existants
-# Suit les principes DRY, KISS, YAGNI et les conventions du projet
+# Optimized initialization script that uses existing files
+# Follows DRY, KISS, YAGNI principles and project conventions
 # =============================================================================
 
-# ---- Configuration du logging ----
+# ---- Logging Configuration ----
 readonly LOG_DIR="logs"
 readonly LOGFILE="${LOG_DIR}/init-$(date +%Y%m%d-%H%M%S).log"
 readonly SCRIPT_START_TIME=$(date -Is)
 
-# Création du répertoire de logs
+# Create logs directory
 mkdir -p "$LOG_DIR"
 
-# Initialisation du logging complet
+# Initialize complete logging
 {
   echo "===== FlowTech-AI init $SCRIPT_START_TIME ====="
   echo "PWD: $(pwd)"
   echo "User: $(id -u):$(id -g)"
 } >> "$LOGFILE"
 
-# Redirection de la sortie vers le fichier de log
+# Redirect output to log file
 exec > >(stdbuf -oL tee -a "$LOGFILE") 2>&1
 
-# Mode debug si activé
+# Debug mode if enabled
 if [ "${INIT_DEBUG:-0}" = "1" ]; then
   exec 9>> "$LOGFILE"
   BASH_XTRACEFD=9
   set -x
 fi
 
-# Trap pour la sortie propre
+# Trap for clean exit
 trap 'handle_exit $?' EXIT
 
 # =============================================================================
-# Variables globales et constantes
+# Global variables and constants
 # =============================================================================
 readonly BOLD="\033[1m"
 readonly RESET="\033[0m"
@@ -48,115 +48,171 @@ readonly RED="\033[31m"
 
 readonly TOTAL_STEPS=11
 readonly AI_DATA_DIR="./AI_Data"
+
+# =============================================================================
+# Help and options
+# =============================================================================
+show_help() {
+  cat << EOF
+FlowTech-AI Initialization Script
+
+Usage: $0 [OPTIONS]
+
+Options:
+  --help, -h          Show this help
+  --non-interactive   Non-interactive mode (auto-generates credentials)
+  --dev               Development mode (removes all data)
+  --debug             Debug mode (detailed trace)
+
+Environment variables:
+  FORCE_NON_INTERACTIVE=true   Force non-interactive mode
+  DEV_MODE=true               Development mode
+  INIT_DEBUG=1                Debug mode
+
+Examples:
+  $0                                    # Interactive mode (default)
+  $0 --non-interactive                  # Auto-generate credentials
+  FORCE_NON_INTERACTIVE=true $0         # Equivalent to --non-interactive
+  $0 --dev                             # Complete development mode
+
+EOF
+}
+
+# Process arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --help|-h)
+      show_help
+      exit 0
+      ;;
+    --non-interactive)
+      FORCE_NON_INTERACTIVE=true
+      shift
+      ;;
+    --dev)
+      DEV_MODE=true
+      shift
+      ;;
+    --debug)
+      INIT_DEBUG=1
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      show_help
+      exit 1
+      ;;
+  esac
+done
 readonly ENV_FILE=".env"
-readonly MIN_FREE_SPACE_KB=2097152  # 2GB en KB
+readonly MIN_FREE_SPACE_KB=2097152  # 2GB in KB
 
 # =============================================================================
-# OPTION DE DÉVELOPPEMENT - MODIFIER ICI POUR LE RESET COMPLET
+# DEVELOPMENT OPTION - MODIFY HERE FOR COMPLETE RESET
 # =============================================================================
-readonly DEV_MODE=false  # true = supprime .env, AI_Data et logs (DEV ONLY!)
+readonly DEV_MODE=false  # true = removes .env, AI_Data and logs (DEV ONLY!)
 # =============================================================================
 
 # =============================================================================
-# CONFIGURATION DES TIMEOUTS
+# TIMEOUT CONFIGURATION
 # =============================================================================
 readonly DISK_CHECK_TIMEOUT=30
-readonly DOCKER_PULL_TIMEOUT=600  # 10 minutes pour télécharger toutes les images
-readonly SERVICE_START_TIMEOUT=120  # 2 minutes pour démarrer les services
-readonly HEALTH_CHECK_TIMEOUT=180  # 3 minutes pour les health checks
+readonly DOCKER_PULL_TIMEOUT=600  # 10 minutes to download all images
+readonly SERVICE_START_TIMEOUT=120  # 2 minutes to start services
+readonly HEALTH_CHECK_TIMEOUT=180  # 3 minutes for health checks
 # =============================================================================
 
-# Compteur d'étapes
+# Step counter
 STEP=0
 
 # =============================================================================
-# Fonctions utilitaires optimisées
+# Optimized utility functions
 # =============================================================================
 
-# Vérification de l'espace disque disponible
+# Check available disk space
 check_disk_space() {
-  log_info "Vérification de l'espace disque disponible..."
+  log_info "Checking available disk space..."
   
   local available_space_kb
   available_space_kb=$(df . | awk 'NR==2 {print $4}')
   
   if [ "$available_space_kb" -lt "$MIN_FREE_SPACE_KB" ]; then
-    log_error "Espace disque insuffisant !"
-    log_error "Espace disponible: $((available_space_kb / 1024 / 1024))GB"
-    log_error "Espace requis: $((MIN_FREE_SPACE_KB / 1024 / 1024))GB"
-    log_error "Libérez de l'espace disque avant de continuer."
+    log_error "Insufficient disk space!"
+    log_error "Available space: $((available_space_kb / 1024 / 1024))GB"
+    log_error "Required space: $((MIN_FREE_SPACE_KB / 1024 / 1024))GB"
+    log_error "Free up disk space before continuing."
     return 1
   fi
   
-  log_ok "Espace disque OK: $((available_space_kb / 1024 / 1024))GB disponible"
+  log_ok "Disk space OK: $((available_space_kb / 1024 / 1024))GB available"
   return 0
 }
 
 
-# Configuration ClickHouse
+# ClickHouse configuration
 configure_clickhouse() {
-  log_info "Configuration des utilisateurs ClickHouse..."
+  log_info "Configuring ClickHouse users..."
   
-  # Attendre que ClickHouse soit prêt
+  # Wait for ClickHouse to be ready
   local max_attempts=30
   local attempt=1
   
   while [ $attempt -le $max_attempts ]; do
     if docker exec clickhouse clickhouse-client --query "SELECT 1" >/dev/null 2>&1; then
-      log_ok "ClickHouse est prêt"
+      log_ok "ClickHouse is ready"
       break
     fi
     
-    log_info "Attente de ClickHouse... (tentative $attempt/$max_attempts)"
+    log_info "Waiting for ClickHouse... (attempt $attempt/$max_attempts)"
     sleep 2
     attempt=$((attempt + 1))
   done
   
   if [ $attempt -gt $max_attempts ]; then
-    log_error "ClickHouse n'est pas accessible après $max_attempts tentatives"
+    log_error "ClickHouse is not accessible after $max_attempts attempts"
     return 1
   fi
   
-  # Récupérer le mot de passe ClickHouse
+  # Get ClickHouse password
   local clickhouse_password
   clickhouse_password=$(get_env_value CLICKHOUSE_PASSWORD)
   
   if [ -z "$clickhouse_password" ]; then
-    log_error "Mot de passe ClickHouse non trouvé"
+    log_error "ClickHouse password not found"
     return 1
   fi
   
-  # Créer l'utilisateur clickhouse s'il n'existe pas
-  log_info "Création de l'utilisateur clickhouse..."
+  # Create clickhouse user if it doesn't exist
+  log_info "Creating clickhouse user..."
   if ! docker exec clickhouse clickhouse-client --user langfuse --password "$clickhouse_password" --query "SELECT name FROM system.users WHERE name = 'clickhouse'" | grep -q clickhouse; then
     docker exec clickhouse clickhouse-client --user langfuse --password "$clickhouse_password" --query "CREATE USER IF NOT EXISTS clickhouse IDENTIFIED BY '$clickhouse_password'" >/dev/null 2>&1
-    log_ok "Utilisateur clickhouse créé"
+    log_ok "clickhouse user created"
   else
-    log_info "Utilisateur clickhouse existe déjà"
+    log_info "clickhouse user already exists"
   fi
   
-  # Octroyer les permissions
-  log_info "Octroi des permissions à l'utilisateur clickhouse..."
+  # Grant permissions
+  log_info "Granting permissions to clickhouse user..."
   docker exec clickhouse clickhouse-client --user langfuse --password "$clickhouse_password" --query "GRANT ALL ON default.* TO clickhouse" >/dev/null 2>&1
-  log_ok "Permissions ClickHouse configurées"
+  log_ok "ClickHouse permissions configured"
   
   return 0
 }
 
-# Téléchargement des images Docker
+# Docker images download
 pull_docker_images() {
-  log_info "Téléchargement des images Docker (timeout: ${DOCKER_PULL_TIMEOUT}s)..."
+  log_info "Downloading Docker images (timeout: ${DOCKER_PULL_TIMEOUT}s)..."
   
   if run_with_timeout "$DOCKER_PULL_TIMEOUT" "docker compose pull"; then
-    log_ok "Images Docker téléchargées avec succès"
+    log_ok "Docker images downloaded successfully"
     return 0
   else
-    log_error "Échec du téléchargement des images Docker"
+    log_error "Failed to download Docker images"
     return 1
   fi
 }
 
-# Gestion de la sortie du script
+# Script exit handling
 handle_exit() {
   local exit_code=$1
   local end_time=$(date -Is)
@@ -390,56 +446,56 @@ show_final_summary() {
   echo "  🗄️  Qdrant (Base vectorielle):    http://localhost:6333"
   echo "  📊 ClickHouse (Analytics):       http://localhost:8123"
   echo
-  log_info "🔑 Identifiants par défaut :"
+  log_info "🔑 Default Credentials:"
   echo "  • Langfuse: $(get_env_value LANGFUSE_INIT_USER_EMAIL) / $(get_env_value LANGFUSE_INIT_USER_PASSWORD)"
   echo "  • N8N: $(get_env_value N8N_BASIC_AUTH_USER) / $(get_env_value N8N_BASIC_AUTH_PASSWORD)"
   echo "  • N8N Bearer Token: $(get_env_value N8N_SECURITY_API_BEARER_AUTH)"
   echo
-  log_info "📁 Fichiers importants :"
+  log_info "📁 Important Files:"
   echo "  • Configuration: .env"
   echo "  • Logs: $LOGFILE"
-  echo "  • Données: ./AI_Data/"
+  echo "  • Data: ./AI_Data/"
   echo
-  log_info "🛠️  Commandes utiles :"
-  echo "  • Voir les logs: docker compose logs -f [service]"
-  echo "  • Redémarrer: docker compose restart [service]"
-  echo "  • Arrêter tout: docker compose down"
-  echo "  • Voir l'état: docker compose ps"
+  log_info "🛠️  Useful Commands:"
+  echo "  • View logs: docker compose logs -f [service]"
+  echo "  • Restart: docker compose restart [service]"
+  echo "  • Stop all: docker compose down"
+  echo "  • View status: docker compose ps"
   echo
 }
 
-# Affichage des options de développement
+# Display development options
 show_dev_options() {
-  log_info "Mode développement activé:"
-  echo "  DEV_MODE=true dans le script = Reset complet (.env, AI_Data, logs)"
+  log_info "Development mode enabled:"
+  echo "  DEV_MODE=true in script = Complete reset (.env, AI_Data, logs)"
   echo ""
 }
 
 # =============================================================================
-# Fonction principale
+# Main function
 # =============================================================================
 main() {
-  # Vérification des arguments d'aide
+  # Check help arguments
   if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
     echo "FlowTech-AI Initialization Script"
     echo "Usage: $0 [options]"
     echo ""
-    echo "Option de développement:"
-    echo "  Modifier DEV_MODE=true dans le script pour reset complet"
-    echo "  (supprime .env, AI_Data et logs)"
+    echo "Development option:"
+    echo "  Modify DEV_MODE=true in script for complete reset"
+    echo "  (removes .env, AI_Data and logs)"
     echo ""
     exit 0
   fi
   
-  log_info "Démarrage de l'initialisation FlowTech-AI"
+  log_info "Starting FlowTech-AI initialization"
   
-  # Affichage du mode développement si activé
+  # Display development mode if enabled
   if [ "$DEV_MODE" = "true" ]; then
     show_dev_options
   fi
   
-  # Étape 1: Vérification des prérequis
-  next_step "Validation des prérequis"
+  # Step 1: Prerequisites check
+  next_step "Validating prerequisites"
   check_dependency "openssl"
   check_dependency "curl"
   check_dependency "docker"
@@ -628,37 +684,51 @@ if [ -d searxng ]; then
   # Demander l'email de l'utilisateur si pas défini
   local user_mail
   if [ -z "$(get_env_value LANGFUSE_INIT_USER_EMAIL)" ]; then
-    # Vérifier si on est en mode interactif (terminal avec utilisateur)
-    if [ -t 0 ] && [ -t 1 ]; then
-      printf "\n${YELLOW}Configuration Langfuse - Email utilisateur${RESET}\n"
-      printf "Entrez l'email de l'utilisateur administrateur Langfuse: "
+    # Mode interactif par défaut (sauf si FORCE_NON_INTERACTIVE=true)
+    if [ "$FORCE_NON_INTERACTIVE" != "true" ]; then
+      printf "\n${YELLOW}Langfuse Configuration - User Email${RESET}\n"
+      printf "Enter the email for the Langfuse administrator user: "
       read -r user_mail
       
       # Validation basique de l'email
       if [[ ! "$user_mail" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-        log_error "Email invalide: $user_mail"
-        log_error "Format attendu: utilisateur@domaine.com"
+        log_error "Invalid email: $user_mail"
+        log_error "Expected format: user@domain.com"
         exit 1
       fi
     else
-      # Mode non-interactif : utiliser un email par défaut valide
+      # Forced non-interactive mode: use a valid default email
       user_mail="admin@flowtech.local"
-      log_info "Mode non-interactif détecté, utilisation de l'email par défaut: $user_mail"
+      log_info "Forced non-interactive mode, using default email: $user_mail"
     fi
     
     set_env_value LANGFUSE_INIT_USER_EMAIL "$user_mail" enforce
-    log_info "Email utilisateur Langfuse configuré: $user_mail"
+    log_info "Langfuse user email configured: $user_mail"
   else
     user_mail=$(get_env_value LANGFUSE_INIT_USER_EMAIL)
-    log_info "Email utilisateur Langfuse déjà configuré: $user_mail"
+    log_info "Langfuse user email already configured: $user_mail"
   fi
   
-  # Génération des clés API si nécessaire
+  # Génération du mot de passe si nécessaire
   if [ -z "$(get_env_value LANGFUSE_INIT_USER_PASSWORD)" ]; then
     local user_password
-    user_password=$(openssl rand -hex 18)
+    if [ "$FORCE_NON_INTERACTIVE" != "true" ]; then
+      printf "\n${YELLOW}Langfuse Configuration - Password${RESET}\n"
+      printf "Enter the password for the Langfuse administrator user (or press Enter for auto-generation): "
+      read -r user_password
+      
+      if [ -z "$user_password" ]; then
+        user_password=$(openssl rand -hex 18)
+        log_info "Langfuse user password auto-generated"
+      else
+        log_info "Langfuse user password set manually"
+      fi
+    else
+      user_password=$(openssl rand -hex 18)
+      log_info "Non-interactive mode, Langfuse user password auto-generated"
+    fi
+    
     set_env_value LANGFUSE_INIT_USER_PASSWORD "$user_password" enforce
-    log_info "Mot de passe utilisateur Langfuse généré"
   fi
   
   if [ -z "$(get_env_value LANGFUSE_INIT_PROJECT_PUBLIC_KEY)" ]; then

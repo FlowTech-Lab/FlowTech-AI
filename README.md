@@ -101,6 +101,34 @@ ollama pull bge-m3:567m # Embedding model
 3. **Create Project**: Get API keys for monitoring
 4. **Configure OpenWebUI**: Add Langfuse API keys in Settings
 
+**🔑 Customize Langfuse Credentials**:
+
+**Interactive Mode (Default)**:
+```bash
+# Run init.sh interactively (asks for email and password)
+./init.sh
+
+# The script will ask:
+# - Email for Langfuse admin user
+# - Password (or press Enter for auto-generation)
+```
+
+**Non-Interactive Mode**:
+```bash
+# Auto-generate all credentials
+./init.sh --non-interactive
+
+# Or set variables before running
+export LANGFUSE_INIT_USER_EMAIL="your-email@domain.com"
+export LANGFUSE_INIT_USER_PASSWORD="your-secure-password"
+./init.sh
+```
+
+**View Current Credentials**:
+```bash
+cat .env | grep -E "LANGFUSE_INIT_USER"
+```
+
 ### 8. Configure RAG System (CRITICAL)
 1. **Access OpenWebUI**: http://localhost:8081
 2. **Go to Admin Panel** → Settings → Documents
