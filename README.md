@@ -222,7 +222,7 @@ docker compose exec openwebui env | grep -E "(VECTOR_DB|QDRANT_URI)"
 | **PostgreSQL** | Main Database | `postgres:5432` | 5432 | ✅ Auto-configured |
 | **Redis** | Cache & Queues | `redis:6379` | 6379 | ✅ Auto-configured |
 | **Qdrant** | Vector Database | `qdrant:6333` | 6333 | ✅ Auto-configured |
-| **ClickHouse** | Analytics DB | `clickhouse:8123` | 8123 | ✅ Auto-configured |
+| **ClickHouse** | Analytics DB | `clickhouse:8123` | 8123 | ✅ **Langfuse backend** - AI traces, performance, usage analytics |
 | **MinIO** | S3 Storage | `minio:9000` | 9092 | ✅ Auto-configured |
 
 ### 🔗 Service Interconnections
