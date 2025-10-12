@@ -121,14 +121,6 @@ curl -s http://localhost:6333  # Qdrant
 ```
 ### 🌐 Network URLs
 
-#### External Access (LAN)
-- **OpenWebUI**: http://x.x.x.x:8081
-- **n8n**: http://x.x.x.x:5678
-- **SearxNG**: http://x.x.x.x:8082
-- **Langfuse**: http://x.x.x.x:3300
-- **Qdrant**: http://x.x.x.x:6333
-- **MinIO**: http://x.x.x.x:9092
-
 #### Internal Docker Communication
 | Service | Container Name | Internal URL | Port | Usage |
 |---------|----------------|--------------|------|-------|
