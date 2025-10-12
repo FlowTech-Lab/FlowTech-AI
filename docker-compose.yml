@@ -2,6 +2,10 @@ networks:
   flow-ai-network:
     driver: bridge
 
+volumes:
+  postgres_data:
+    driver: local
+
 services:
   # 1. Postgres - Base de données principale
   postgres:
@@ -15,7 +19,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-n8n}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
-      - ./AI_Data/pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./AI_Data/postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n} -d ${POSTGRES_DB:-n8n}"]
