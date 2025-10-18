@@ -109,6 +109,35 @@ services:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
 
+  # 5.1. MCP-Qdrant - Model Context Protocol Server for Cursor
+  # Uses bge-m3:567m via Ollama for embeddings
+  mcp-qdrant:
+    image: python:3.11-slim
+    container_name: mcp-qdrant
+    restart: unless-stopped
+    networks:
+      - flow-ai-network
+    depends_on:
+      qdrant:
+        condition: service_started
+    ports:
+      - "${MCP_QDRANT_PORT:-8000}:8000"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - COLLECTION_NAME=${MCP_QDRANT_COLLECTION:-cursor-context}
+      - EMBEDDING_MODEL=${MCP_EMBEDDING_MODEL:-bge-m3:567m}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://192.168.0.2:11434}
+      - FASTMCP_PORT=8000
+      - FASTMCP_HOST=0.0.0.0
+    command: >
+      sh -c "pip install --no-cache-dir mcp-server-qdrant &&
+             mcp-server-qdrant --transport sse"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
   # 6. Langfuse-worker - Migrations et traitement
   langfuse-worker:
     image: docker.io/langfuse/langfuse-worker:3

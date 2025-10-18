@@ -444,6 +444,7 @@ show_final_summary() {
   echo "  🔍 SearxNG (Moteur de recherche): http://localhost:$(get_env_value SEARXNG_PORT)"
   echo "  ⚡ N8N (Automatisation):         http://localhost:$(get_env_value N8N_PORT)"
   echo "  🗄️  Qdrant (Base vectorielle):    http://localhost:6333"
+  echo "  🔌 MCP-Qdrant (Cursor):          http://localhost:$(get_env_value MCP_QDRANT_PORT)"
   echo "  📊 ClickHouse (Analytics):       http://localhost:8123"
   echo
   log_info "🔑 Default Credentials:"
@@ -628,6 +629,9 @@ if [ -d searxng ]; then
   LANGFUSE_EXTERNAL_URL="http://localhost:3300" \
   LANGFUSE_TRACING_ENVIRONMENT="dev" \
   LANGFUSE_INIT_PROJECT_RETENTION="30" \
+  MCP_QDRANT_PORT="8000" \
+  MCP_QDRANT_COLLECTION="cursor-context" \
+  MCP_EMBEDDING_MODEL="bge-m3:567m" \
   TZ="Europe/Paris"
   
   # Génération du mot de passe PostgreSQL
