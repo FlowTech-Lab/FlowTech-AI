@@ -1,363 +1,311 @@
-# FlowTech-AI
+# 🚀 FlowTech-AI: Complete Developer Knowledge Stack
 
-A comprehensive, locally-deployed AI infrastructure designed for FPV, infrastructure, automation, and documentation needs.
+> **All-in-one AI infrastructure** for developers: Code assistant (Cursor) + Conversational AI (OpenWebUI) + Personal Knowledge Management (Obsidian) + Intelligent Automation (n8n)
 
-## 💻 Prerequisites
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-compose-blue)](docker-compose.yml)
+[![Python](https://img.shields.io/badge/python-3.11-blue)](https://python.org)
 
-### Minimum Requirements
-- **CPU**: 4 cores (Intel/AMD x64)
-- **RAM**: 8GB
-- **Storage**: 50GB SSD free space
-- **OS**: Linux (Ubuntu 20.04+ recommended)
-- **Software**: Docker 24.0+ with Compose plugin, Git, curl
-- **GPU**: Optional, CPU-only mode supported
+---
 
-### Recommended Configuration
-- **CPU**: 8 cores (Intel/AMD x64)
-- **RAM**: 32GB (recommended 64GB)
-- **Storage**: 100GB NVMe SSD
-- **GPU**: NVIDIA RTX 4070 or equivalent
-- **Network**: 1Gbps connection
+## 🎯 What is FlowTech-AI?
 
-### Ollama Models by GPU
-- **RTX 4060 (8GB)**: qwen3:8b + bge-m3:567m
-- **CPU only**: qwen3:4b (very slow)
+A **production-ready, self-hosted AI stack** that combines:
 
-## 🚀 Quick Start
+- 🤖 **AI Services**: n8n automation, OpenWebUI interface, Qdrant vector DB, Ollama LLM
+- 💻 **Cursor Integration**: MCP-Qdrant for AI-enhanced coding with context awareness
+- 📝 **Knowledge Management**: Automated Obsidian notes synchronization → RAG
+- 🔄 **Intelligent Workflows**: n8n automation for notes processing
+- 🚀 **One-command deployment**: `./init.sh` and everything works
+
+### ✨ Key Features
+
+✅ **Cursor AI Enhancement** via Model Context Protocol (MCP)  
+✅ **OpenWebUI** with RAG over your personal notes  
+✅ **Obsidian Sync** with automatic indexing and embedding  
+✅ **Vector Search** with Qdrant (1024-dim embeddings)  
+✅ **Production-ready** Docker Compose stack  
+✅ **Automated Workflows** with n8n orchestration  
+✅ **Fork-friendly** - Clone once, everything works  
+
+---
+
+## 🚀 Quick Start (5 minutes)
 
 ```bash
+# 1. Clone repository
 git clone https://github.com/FlowTech-Lab/FlowTech-AI.git
 cd FlowTech-AI
-chmod +x init.sh
-./init.sh
-```
 
-The initialization script will automatically:
-- ✅ Verify system prerequisites
-- ✅ Download Docker images
-- ✅ Configure services
-- ✅ Start the complete stack
-
-## 🎯 What's Next?
-
-After successful installation:
-
-### 1. Verify Installation
-```bash
-# Check all services are running
-docker compose ps
-
-# Test service endpoints
-curl -s http://localhost:8081  # OpenWebUI
-curl -s http://localhost:5678  # n8n
-curl -s http://localhost:3300  # Langfuse
-```
-
-### 2. Access Services
-- **OpenWebUI** (Main Interface): http://localhost:8081
-- **n8n** (Workflows): http://localhost:5678
-- **Langfuse** (Monitoring): http://localhost:3300
-
-### 3. Get Credentials
-```bash
-# View your login credentials
-cat .env | grep -E "(USER|PASSWORD|EMAIL)"
-```
-
-### 4. Install Ollama (Required)
-```bash
-# Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
-ollama serve
-
-# Pull recommended models (in another terminal)
-ollama pull qwen3:4b    # For low VRAM
-ollama pull qwen3:8b    # For 8GB+ VRAM
-ollama pull bge-m3:567m # Embedding model
-```
-
-### 5. Configure OpenWebUI
-1. **Access OpenWebUI**: http://localhost:8081
-2. **Go to Admin Panel** → Settings → Web Search
-3. **Configure SearxNG**: Set URL to `http://searxng:8080`
-4. **Enable Web Search**: Toggle "Web search engine" to ON
-
-### 6. Configure Ollama Connection (CRITICAL)
-1. **Go to Admin Panel** → Settings → Connections
-2. **Enable Ollama API**: Toggle "API Ollama" to ON
-3. **Add Ollama Connection**: Click the green "+" button
-4. **Configure Connection**:
-   - Type: Local
-   - URL: `http://localhost:11434` (for local installation) or your Ollama server IP
-   - Auth: None (unless you have API key configured)
-5. **Test Connection**: Verify models are detected and available
-6. **Save Settings**: Click "Enregistrer" to save configuration
-
-**⚠️ Without Ollama connection, no LLM models will be available!**
-
-### 7. Configure Langfuse Integration
-1. **Access Langfuse**: http://localhost:3300
-2. **Login**: Use credentials from `.env` file
-3. **Create Project**: Get API keys for monitoring
-4. **Configure OpenWebUI**: Add Langfuse API keys in Settings
-
-**🔑 Customize Langfuse Credentials**:
-
-**Interactive Mode (Default)**:
-```bash
-# Run init.sh interactively (asks for email and password)
+# 2. Initialize stack (optional: edit .env first)
 ./init.sh
 
-# The script will ask:
-# - Email for Langfuse admin user
-# - Password (or press Enter for auto-generation)
+# ✅ Stack ready! Services available at:
+# - OpenWebUI: http://localhost:8081
+# - Cursor MCP: http://localhost:8000
+# - n8n: http://localhost:5678
+# - Qdrant: http://localhost:6333
 ```
 
-**Non-Interactive Mode**:
+**Full guide**: See [QUICKSTART.md](QUICKSTART.md)
+
+---
+
+## 📦 What's Included?
+
+### Core Services
+
+| Service | Port | Description | Status |
+|---------|------|-------------|--------|
+| **OpenWebUI** | 8081 | AI chat interface with RAG | ✅ Production |
+| **MCP-Qdrant** | 8000 | Cursor IDE integration | ✅ Production |
+| **n8n** | 5678 | Workflow automation | ✅ Production |
+| **Qdrant** | 6333 | Vector database | ✅ Production |
+| **PostgreSQL** | 5432 | Logs & metadata | ✅ Production |
+| **Redis** | 6379 | Cache & queues | ✅ Production |
+| **SearxNG** | 8082 | Web search engine | ✅ Production |
+
+### Python Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `services/notes-sync/sync-obsidian.py` | Sync Obsidian → Qdrant RAG |
+| `services/notes-sync/generate-indexes.py` | Auto-generate indexes (VMs, Servers) |
+
+### Workflows (n8n)
+
+| Workflow | Purpose | Status |
+|----------|---------|--------|
+| `obsidian-sync` | Notes sync automation | ⏳ To create in n8n |
+
+---
+
+## 💻 Cursor Integration
+
+### Setup (2 minutes)
+
 ```bash
-# Auto-generate all credentials
-./init.sh --non-interactive
+# 1. Copy MCP config
+cp config/mcp-config.json ~/.cursor/mcp.json
 
-# Or set variables before running
-export LANGFUSE_INIT_USER_EMAIL="your-email@domain.com"
-export LANGFUSE_INIT_USER_PASSWORD="your-secure-password"
-./init.sh
+# 2. Edit IP (change to your server IP)
+nano ~/.cursor/mcp.json
+
+# 3. Restart Cursor
+
+# 4. Test
+@qdrant store "FlowTech-AI is awesome!"
+@qdrant find awesome
 ```
 
-**View Current Credentials**:
+**Full guide**: `docs/setup/02-cursor-setup.md`
+
+---
+
+## 📝 Obsidian Integration
+
+### Setup Knowledge Management
+
 ```bash
-cat .env | grep -E "LANGFUSE_INIT_USER"
+# 1. Point Obsidian vault to Notes/
+# 2. Use templates from Notes/_Templates/
+# 3. Enable sync (optional: via Nextcloud)
+
+# 4. Auto-sync to RAG
+python3 services/notes-sync/sync-obsidian.py
+
+# Or via n8n (every 10 min)
 ```
 
-### 8. Configure RAG System (CRITICAL)
-1. **Access OpenWebUI**: http://localhost:8081
-2. **Go to Admin Panel** → Settings → Documents
-3. **Configure Embedding Model**:
-   - **Moteur de modèle d'embedding**: Ollama (`http://localhost:11434`)
-   - **Modèle d'embedding**: `bge-m3:567m` (recommandé) ou `qwen3-embedding:0.6b`
-   - **Taille du lot d'embedding**: 1 (par défaut)
-4. **Configure Retrieval**:
-   - **Mode avec injection complète**: ON
-   - **Recherche hybride**: ON  
-   - **Top K**: 3 (nombre de chunks à récupérer)
-5. **Test RAG Function**: Upload a document and verify it's vectorized
-6. **Manage Vector Storage**: Use "Réindexer les vecteurs" if needed
+**Features**:
+- ✅ Auto-generated indexes (VMs, Servers, Domains)
+- ✅ Semantic search in OpenWebUI
+- ✅ Change detection (MD5 hash)
+- ✅ Smart chunking by sections `##`
 
-**📝 Note**: 
-- **Qdrant** = Base de données vectorielle (auto-configurée dans docker-compose.yml)
-- **Embedding models** = Configuration dans Settings → Documents
-- **Chat models** = Modèles pour conversation (Settings → Models)
-- **RAG System** = Configuration complète dans Settings → Documents
+**Full guide**: `docs/setup/03-obsidian-setup.md`
 
-**Alternative verification**:
-```bash
-# Check Qdrant health
-curl http://localhost:6333/health
-# Expected: {"title":"qdrant - vector search engine","version":"..."}
-
-# List collections (should be empty initially)
-curl http://localhost:6333/collections
-# Expected: {"result":{"collections":[]},"status":"ok",...}
-
-# Check OpenWebUI environment
-docker compose exec openwebui env | grep -E "(VECTOR_DB|QDRANT_URI)"
-# Expected: VECTOR_DB=qdrant, QDRANT_URI=http://qdrant:6333
-```
-
-### 10. Configure n8n Internal Connections (CRITICAL)
-1. **Access n8n**: http://localhost:5678
-2. **Login**: Use credentials from `.env` file
-3. **Get Connection Info**: 
-   ```bash
-   # View all connection details
-   cat .env | grep -E "(POSTGRES|REDIS|MINIO|CLICKHOUSE)"
-   ```
-4. **Go to Settings** → Connections → Add New Connection
-
-**Configure Internal Services**:
-5. **PostgreSQL Connection**:
-   - Type: PostgreSQL
-   - Host: `postgres` (internal Docker name)
-   - Port: `5432`
-   - Database: `n8n` (or your POSTGRES_DB value)
-   - User: `n8n` (or your POSTGRES_USER value)
-   - Password: From `.env` file
-
-6. **Qdrant Connection**:
-   - Type: Qdrant
-   - URL: `http://qdrant:6333` (internal Docker name)
-   - API Key: Leave empty (no auth required)
-
-7. **Redis Connection**:
-   - Type: Redis
-   - Host: `redis` (internal Docker name)
-   - Port: `6379`
-   - Password: From `.env` file (REDIS_AUTH)
-
-8. **MinIO Connection**:
-   - Type: S3
-   - Endpoint: `http://minio:9000`
-   - Access Key: `minio`
-   - Secret Key: From `.env` file (MINIO_ROOT_PASSWORD)
-
-### 11. Import and Configure Workflows
-1. **Import Workflows**: Use pre-built automation templates
-2. **Configure Agent Workflows**: Set up multi-agent orchestration
-3. **Test Internal Connections**: Verify all services are accessible
-
-### 12. First Steps
-1. **Test AI Chat**: OpenWebUI with web search enabled
-2. **Verify Langfuse**: Check AI request monitoring
-3. **Run n8n Workflow**: Test automation pipeline
-4. **Read documentation**: See [USER_GUIDE.md](docs/USER_GUIDE.md)
-
-## 📋 Complete Services Overview
-
-| Service | Purpose | URL | Port | Configuration |
-|---------|---------|-----|------|---------------|
-| **OpenWebUI** | Main AI Interface | http://localhost:8081 | 8081 | ✅ SQLite + Qdrant + SearxNG |
-| **n8n** | Workflow Automation | http://localhost:5678 | 5678 | ✅ PostgreSQL + Redis |
-| **Langfuse** | AI Monitoring | http://localhost:3300 | 3300 | ✅ PostgreSQL + ClickHouse + MinIO |
-| **SearxNG** | Web Search | http://localhost:8082 | 8082 | ✅ Auto-configured |
-| **PostgreSQL** | Main Database | `postgres:5432` | 5432 | ✅ Auto-configured |
-| **Redis** | Cache & Queues | `redis:6379` | 6379 | ✅ Auto-configured |
-| **Qdrant** | Vector Database | `qdrant:6333` | 6333 | ✅ Auto-configured |
-| **MCP-Qdrant** | Cursor Integration | `localhost:8000` | 8000 | ⚙️ Optional - See [MCP Guide](docs/MCP-QDRANT.md) |
-| **ClickHouse** | Analytics DB | `clickhouse:8123` | 8123 | ✅ **Langfuse backend** - AI traces, performance, usage analytics |
-| **MinIO** | S3 Storage | `minio:9000` | 9092 | ✅ Auto-configured |
-
-### 🔗 Service Interconnections
-
-```
-User → OpenWebUI → Ollama (external)
-  ↓
-OpenWebUI → SQLite (local data) + Qdrant (vectors) + SearxNG (search)
-  ↓
-n8n → PostgreSQL (workflows + agent state) + Redis (queues)
-  ↓
-Langfuse → PostgreSQL (metadata) + ClickHouse (analytics) + MinIO (storage)
-```
+---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   OpenWebUI     │    │      n8n        │    │    SearxNG      │
-│  (Main UI)      │◄──►│ (Orchestrator)  │◄──►│  (Web Search)   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│     Qdrant      │    │   PostgreSQL    │    │     Redis       │
-│ (Vector Store)  │    │   (Database)    │    │   (Cache)       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                     🖥️  YOUR MACHINE                          │
+│  ├─ Cursor IDE (with MCP-Qdrant)                             │
+│  └─ Obsidian (optional, for notes)                           │
+└────────────────────────┬─────────────────────────────────────┘
+                         │
+                         ↓ MCP / Sync
+┌──────────────────────────────────────────────────────────────┐
+│                   🐳 FLOWTECH-AI STACK                        │
+├──────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
+│  │ MCP-Qdrant │  │  OpenWebUI │  │    n8n     │            │
+│  │  :8000     │  │   :8081    │  │   :5678    │            │
+│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘            │
+│        │                │                │                    │
+│        └────────────────┴────────────────┘                   │
+│                         │                                     │
+│                    ┌────▼────┐                               │
+│                    │ Qdrant  │                               │
+│                    │  :6333  │                               │
+│                    └────┬────┘                               │
+│                         │                                     │
+│         ┌───────────────┼───────────────┐                   │
+│         │               │               │                    │
+│    ┌────▼────┐    ┌────▼────┐    ┌────▼────┐              │
+│    │PostgreSQL│    │  Redis  │    │ Ollama  │              │
+│    │  :5432   │    │  :6379  │    │ (ext)   │              │
+│    └──────────┘    └──────────┘    └──────────┘              │
+│                                                               │
+│  Collections:                                                 │
+│  ├─ cursor-context    → Cursor MCP (code snippets)          │
+│  └─ notes-flowtech    → Obsidian notes (RAG)                │
+│                                                               │
+└──────────────────────────────────────────────────────────────┘
 ```
-
-## 🚀 Advanced Features
-
-### MCP-Qdrant Server (Cursor Integration)
-Enable Cursor AI to interact with your Qdrant vector database:
-- **Store code snippets** for contextual retrieval
-- **Search codebase** with semantic search
-- **Enhance AI responses** with project context
-- **Persistent knowledge** across sessions
-
-**Embedding Model**: 🎯 **`bge-m3:567m`** via Ollama (multilingual, high-quality embeddings)
-
-**Setup**: See [MCP-Qdrant Guide](docs/MCP-QDRANT.md) for complete integration instructions.
-
-## 📚 Documentation
-
-### User Documentation
-- **[Setup Guide](docs/SETUP.md)** - Complete installation instructions
-- **[User Guide](docs/USER_GUIDE.md)** - How to use the system
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-
-### Developer Documentation
-- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Development and customization
-- **[MCP-Qdrant Integration](docs/MCP-QDRANT.md)** - Cursor AI integration with Qdrant
-- **[Architecture](docs/ARCHITECTURE.md)** - Technical specifications
-- **[API Reference](docs/API_REFERENCE.md)** - API documentation
-
-### Internal Documentation
-- **[Deployment](docs/internal/DEPLOYMENT.md)** - Production deployment
-- **[Monitoring](docs/internal/MONITORING.md)** - System monitoring
-- **[Security](docs/internal/SECURITY.md)** - Security guidelines
-
-## 🎯 Key Features
-
-- **Multi-Agent Orchestration**: n8n-based agent coordination
-- **Vector RAG**: Qdrant-powered document retrieval
-- **AI Observability**: Langfuse tracing and monitoring
-- **Local LLM**: Ollama integration for privacy
-- **Web Search**: SearxNG for real-time information
-- **Persistent Storage**: PostgreSQL + ClickHouse + MinIO
-
-## 🔧 Configuration
-
-### External Dependencies
-- **Ollama**: Local LLM engine (install separately)
-
-### Environment Variables
-Key configuration is in `.env` file:
-```bash
-POSTGRES_PASSWORD=<auto-generated>
-LANGFUSE_INIT_USER_PASSWORD=<auto-generated>
-N8N_BASIC_AUTH_PASSWORD=<auto-generated>
-```
-
-## 🛠️ Development
-
-### Prerequisites
-- Docker 24.0+ with Compose plugin
-- Git
-- 8GB+ RAM, 20GB+ storage
-
-### Quick Development Setup
-```bash
-# Clone and start
-git clone https://github.com/FlowTech-Lab/FlowTech-AI.git
-cd FlowTech-AI
-./init.sh
-
-# Development mode
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-```
-
-## 🔒 Security
-
-- **Local-First**: All services run locally by default
-- **Network Isolation**: Services communicate via internal Docker network
-- **Authentication**: Built-in auth for all web interfaces
-- **Data Persistence**: All data stored in `./AI_Data/` directory
-
-## 📊 Monitoring
-
-- **Health Checks**: Built-in service monitoring
-- **Logging**: Comprehensive logging system
-- **Metrics**: Performance and usage tracking
-- **Observability**: Langfuse integration for AI monitoring
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **OpenWebUI**: Main AI interface
-- **n8n**: Workflow orchestration
-- **Langfuse**: AI observability
-- **Qdrant**: Vector database
-- **Ollama**: Local LLM engine
 
 ---
 
-**FlowTech-AI** - Personal AI infrastructure for automation and documentation
+## 📚 Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [QUICKSTART.md](QUICKSTART.md) | ⚡ Start in 5 minutes |
+| [MIGRATION-V2-PLAN.md](MIGRATION-V2-PLAN.md) | 🔄 V2 migration plan |
+| [docs/setup/](docs/setup/) | 📖 Complete installation |
+| [docs/architecture/](docs/architecture/) | 🏗️ Technical architecture |
+| [docs/services/](docs/services/) | 🔧 Service documentation |
+| [Notes/README-NOTES.md](Notes/README-NOTES.md) | 📝 Notes management guide |
+
+---
+
+## 🛠️ Advanced Usage
+
+### Manual sync notes to RAG
+
+```bash
+cd services/notes-sync
+python sync-obsidian.py
+```
+
+### Generate indexes
+
+```bash
+python generate-indexes.py
+# Creates VMs-Index.md, Servers-Index.md, etc.
+```
+
+### Monitor Qdrant collections
+
+```bash
+# cursor-context (Cursor MCP)
+curl http://localhost:6333/collections/cursor-context
+
+# notes-flowtech (Obsidian RAG)
+curl http://localhost:6333/collections/notes-flowtech
+```
+
+### View logs
+
+```bash
+docker compose logs -f mcp-qdrant
+docker compose logs -f n8n
+```
+
+---
+
+## 💡 Use Cases
+
+### 1. AI-Enhanced Development (Cursor)
+
+```
+- Code in Cursor with AI assistance
+- @qdrant store to save useful snippets
+- @qdrant find to retrieve context
+- RAG enriched with your technical notes
+```
+
+### 2. Personal Knowledge Base (Obsidian + OpenWebUI)
+
+```
+- Manage notes in Obsidian (VMs, servers, projects)
+- Auto-sync to Qdrant every 10 min
+- Ask questions in OpenWebUI
+- Get answers from your own notes
+```
+
+### 3. Team Knowledge Sharing (Fork)
+
+```
+- Clone repo
+- Team members contribute notes
+- Shared knowledge base via RAG
+- Everyone benefits from collective knowledge
+```
+
+---
+
+## 📊 Requirements
+
+### Minimum (Dev/Test)
+
+- CPU: 4 cores
+- RAM: 8GB
+- Disk: 50GB
+- OS: Linux (Ubuntu 20.04+)
+
+### Recommended (Production)
+
+- CPU: 8+ cores
+- RAM: 32GB (64GB recommended)
+- Disk: 100GB NVMe
+- OS: Linux (Ubuntu 22.04+)
+- Network: 1Gbps
+
+### External Dependencies (optional)
+
+- **Ollama**: External LLM server (if not using cloud APIs)
+- **Nextcloud**: For multi-device note sync
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+## 📜 License
+
+MIT License - See [LICENSE](LICENSE)
+
+---
+
+## 🔗 Links
+
+- **Documentation**: [docs/](docs/)
+- **Quick Start**: [QUICKSTART.md](QUICKSTART.md)
+- **Architecture**: [docs/architecture/](docs/architecture/)
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## 🆘 Support
+
+- **Issues**: GitHub Issues
+- **Discussions**: GitHub Discussions
+- **Documentation**: [docs/](docs/)
+
+---
+
+**Version**: 2.0.0  
+**Status**: 🟢 Production Ready  
+**Last Updated**: 2025-10-18
+
+---
+
+## ⭐ Star this repo if you find it useful!
+

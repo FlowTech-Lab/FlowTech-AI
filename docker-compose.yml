@@ -130,7 +130,7 @@ services:
       - COLLECTION_NAME=${MCP_QDRANT_COLLECTION:-cursor-context}
       - EMBEDDING_MODEL=${FASTEMBED_MODEL:-BAAI/bge-large-en-v1.5}
       - EMBEDDING_PROVIDER=fastembed
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://192.168.0.2:11434}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
       - FASTMCP_PORT=8000
       - FASTMCP_HOST=0.0.0.0
     volumes:
