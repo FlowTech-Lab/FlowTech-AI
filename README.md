@@ -222,6 +222,7 @@ docker compose exec openwebui env | grep -E "(VECTOR_DB|QDRANT_URI)"
 | **PostgreSQL** | Main Database | `postgres:5432` | 5432 | ✅ Auto-configured |
 | **Redis** | Cache & Queues | `redis:6379` | 6379 | ✅ Auto-configured |
 | **Qdrant** | Vector Database | `qdrant:6333` | 6333 | ✅ Auto-configured |
+| **MCP-Qdrant** | Cursor Integration | `localhost:8000` | 8000 | ⚙️ Optional - See [MCP Guide](docs/MCP-QDRANT.md) |
 | **ClickHouse** | Analytics DB | `clickhouse:8123` | 8123 | ✅ **Langfuse backend** - AI traces, performance, usage analytics |
 | **MinIO** | S3 Storage | `minio:9000` | 9092 | ✅ Auto-configured |
 
@@ -252,6 +253,19 @@ Langfuse → PostgreSQL (metadata) + ClickHouse (analytics) + MinIO (storage)
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
+## 🚀 Advanced Features
+
+### MCP-Qdrant Server (Cursor Integration)
+Enable Cursor AI to interact with your Qdrant vector database:
+- **Store code snippets** for contextual retrieval
+- **Search codebase** with semantic search
+- **Enhance AI responses** with project context
+- **Persistent knowledge** across sessions
+
+**Embedding Model**: 🎯 **`bge-m3:567m`** via Ollama (multilingual, high-quality embeddings)
+
+**Setup**: See [MCP-Qdrant Guide](docs/MCP-QDRANT.md) for complete integration instructions.
+
 ## 📚 Documentation
 
 ### User Documentation
@@ -261,6 +275,7 @@ Langfuse → PostgreSQL (metadata) + ClickHouse (analytics) + MinIO (storage)
 
 ### Developer Documentation
 - **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Development and customization
+- **[MCP-Qdrant Integration](docs/MCP-QDRANT.md)** - Cursor AI integration with Qdrant
 - **[Architecture](docs/ARCHITECTURE.md)** - Technical specifications
 - **[API Reference](docs/API_REFERENCE.md)** - API documentation
 

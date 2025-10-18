@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "qdrant": {
+      "command": "node",
+      "args": [],
+      "env": {},
+      "disabled": false,
+      "alwaysAllow": [],
+      "timeout": 30000,
+      "transport": {
+        "type": "sse",
+        "url": "http://YOUR_SERVER_IP:8000/sse"
+      }
+    }
+  }
+}
+
