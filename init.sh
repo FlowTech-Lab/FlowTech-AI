@@ -629,9 +629,6 @@ if [ -d searxng ]; then
   LANGFUSE_EXTERNAL_URL="http://localhost:3300" \
   LANGFUSE_TRACING_ENVIRONMENT="dev" \
   LANGFUSE_INIT_PROJECT_RETENTION="30" \
-  MCP_QDRANT_PORT="8000" \
-  MCP_QDRANT_COLLECTION="cursor-context" \
-  MCP_EMBEDDING_MODEL="bge-m3:567m" \
   TZ="Europe/Paris"
   
   # Génération du mot de passe PostgreSQL
