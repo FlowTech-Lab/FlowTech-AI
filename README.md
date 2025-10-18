@@ -101,6 +101,34 @@ ollama pull bge-m3:567m # Embedding model
 3. **Create Project**: Get API keys for monitoring
 4. **Configure OpenWebUI**: Add Langfuse API keys in Settings
 
+**🔑 Customize Langfuse Credentials**:
+
+**Interactive Mode (Default)**:
+```bash
+# Run init.sh interactively (asks for email and password)
+./init.sh
+
+# The script will ask:
+# - Email for Langfuse admin user
+# - Password (or press Enter for auto-generation)
+```
+
+**Non-Interactive Mode**:
+```bash
+# Auto-generate all credentials
+./init.sh --non-interactive
+
+# Or set variables before running
+export LANGFUSE_INIT_USER_EMAIL="your-email@domain.com"
+export LANGFUSE_INIT_USER_PASSWORD="your-secure-password"
+./init.sh
+```
+
+**View Current Credentials**:
+```bash
+cat .env | grep -E "LANGFUSE_INIT_USER"
+```
+
 ### 8. Configure RAG System (CRITICAL)
 1. **Access OpenWebUI**: http://localhost:8081
 2. **Go to Admin Panel** → Settings → Documents
@@ -194,7 +222,7 @@ docker compose exec openwebui env | grep -E "(VECTOR_DB|QDRANT_URI)"
 | **PostgreSQL** | Main Database | `postgres:5432` | 5432 | ✅ Auto-configured |
 | **Redis** | Cache & Queues | `redis:6379` | 6379 | ✅ Auto-configured |
 | **Qdrant** | Vector Database | `qdrant:6333` | 6333 | ✅ Auto-configured |
-| **ClickHouse** | Analytics DB | `clickhouse:8123` | 8123 | ✅ Auto-configured |
+| **ClickHouse** | Analytics DB | `clickhouse:8123` | 8123 | ✅ **Langfuse backend** - AI traces, performance, usage analytics |
 | **MinIO** | S3 Storage | `minio:9000` | 9092 | ✅ Auto-configured |
 
 ### 🔗 Service Interconnections
