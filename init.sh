@@ -409,7 +409,8 @@ cleanup_containers() {
   log_info "Nettoyage des conteneurs"
   
   # Stop and remove all project containers
-  docker compose down --remove-orphans --volumes 2>/dev/null || true
+  # IMPORTANT: Do NOT use --volumes flag to preserve databases!
+  docker compose down --remove-orphans 2>/dev/null || true
   
   # Clean unused images only
   docker system prune -f 2>/dev/null || true
@@ -439,7 +440,8 @@ cleanup_containers() {
       log_ok "Répertoire logs supprimé"
     fi
     
-    # Completely clean Docker system (without deleting images)
+    # Completely clean Docker system and volumes
+    docker compose down --volumes 2>/dev/null || true
     docker system prune -f --volumes 2>/dev/null || true
     
     log_ok "Nettoyage complet terminé (MODE DEV)"
