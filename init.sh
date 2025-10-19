@@ -449,6 +449,70 @@ cleanup_containers() {
   fi
 }
 
+# Configure Qdrant collections for MCP servers
+configure_qdrant_collections() {
+  log_info "Checking Qdrant availability..."
+  
+  # Wait for Qdrant to be ready
+  local max_attempts=30
+  local attempt=0
+  
+  while [ $attempt -lt $max_attempts ]; do
+    if curl -s "http://localhost:6333/collections" >/dev/null 2>&1; then
+      log_ok "Qdrant is ready"
+      break
+    fi
+    attempt=$((attempt + 1))
+    sleep 2
+  done
+  
+  if [ $attempt -eq $max_attempts ]; then
+    log_error "Qdrant not available after ${max_attempts} attempts"
+    return 1
+  fi
+  
+  # Collection configuration
+  local cursor_context_collection="${MCP_QDRANT_COLLECTION:-cursor-context}"
+  local cursor_knowledge_collection="cursor-knowledge"
+  local embedding_dim=1024  # BAAI/bge-large-en-v1.5
+  
+  log_info "Creating Qdrant collections..."
+  
+  # Create cursor-context collection with named vectors (required by mcp-server-qdrant)
+  if curl -s "http://localhost:6333/collections/${cursor_context_collection}" | grep -q "Not found"; then
+    log_info "Creating collection: ${cursor_context_collection}"
+    if curl -X PUT "http://localhost:6333/collections/${cursor_context_collection}" \
+      -H "Content-Type: application/json" \
+      -d "{\"vectors\": {\"fast-bge-large-en-v1.5\": {\"size\": ${embedding_dim}, \"distance\": \"Cosine\"}}}" >/dev/null 2>&1; then
+      log_ok "Collection ${cursor_context_collection} created"
+    else
+      log_warn "Failed to create collection ${cursor_context_collection}"
+    fi
+  else
+    log_info "Collection ${cursor_context_collection} already exists"
+  fi
+  
+  # Create cursor-knowledge collection with named vectors (required by mcp-server-qdrant)
+  if curl -s "http://localhost:6333/collections/${cursor_knowledge_collection}" | grep -q "Not found"; then
+    log_info "Creating collection: ${cursor_knowledge_collection}"
+    if curl -X PUT "http://localhost:6333/collections/${cursor_knowledge_collection}" \
+      -H "Content-Type: application/json" \
+      -d "{\"vectors\": {\"fast-bge-large-en-v1.5\": {\"size\": ${embedding_dim}, \"distance\": \"Cosine\"}}}" >/dev/null 2>&1; then
+      log_ok "Collection ${cursor_knowledge_collection} created"
+    else
+      log_warn "Failed to create collection ${cursor_knowledge_collection}"
+    fi
+  else
+    log_info "Collection ${cursor_knowledge_collection} already exists"
+  fi
+  
+  # Verify collections
+  local collections_count=$(curl -s "http://localhost:6333/collections" | grep -o '"name"' | wc -l)
+  log_info "Total collections in Qdrant: ${collections_count}"
+  
+  return 0
+}
+
 
 # Final summary display
 show_final_summary() {
@@ -651,7 +715,6 @@ if [ -d searxng ]; then
   OPENWEBUI_PORT="8081" \
   SEARXNG_PORT="8082" \
   N8N_PORT="5678" \
-  MCP_QDRANT_PORT="8000" \
   POSTGRES_USER="n8n" \
   POSTGRES_DB="n8n" \
   LANGFUSE_PORT="3300" \
@@ -908,6 +971,14 @@ if [ -d searxng ]; then
     log_ok "Configuration ClickHouse terminée"
   else
     log_warn "Échec de la configuration ClickHouse (non bloquant)"
+  fi
+  
+  # Configuration Qdrant - Création des collections
+  next_step "Configuration des collections Qdrant"
+  if configure_qdrant_collections; then
+    log_ok "Collections Qdrant créées"
+  else
+    log_warn "Échec de la création des collections Qdrant (non bloquant)"
   fi
   
   

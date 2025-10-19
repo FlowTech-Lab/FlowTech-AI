@@ -57,8 +57,7 @@ cd FlowTech-AI
 | Service | Port | Description | Status |
 |---------|------|-------------|--------|
 | **OpenWebUI** | 8081 | AI chat interface with RAG | ✅ Production |
-| **MCP-Qdrant** | 8000 | Cursor code context (read/write) | ✅ Production |
-| **MCP-Knowledge** | 8001 | Cursor access to OpenWebUI docs (read-only) | ✅ Production |
+| **MCP-Qdrant** | 8000 | Cursor IDE integration | ✅ Production |
 | **n8n** | 5678 | Workflow automation | ✅ Production |
 | **Qdrant** | 6333 | Vector database | ✅ Production |
 | **PostgreSQL** | 5432 | Metadata storage | ✅ Production |
@@ -69,18 +68,6 @@ cd FlowTech-AI
 ---
 
 ## 💻 Cursor Integration
-
-FlowTech-AI provides **two MCP servers** for Cursor:
-
-1. **`qdrant`** (port 8000) - Your **code context** (read/write)
-   - Store code snippets with `@qdrant store`
-   - Retrieve context with `@qdrant find`
-   - Personal knowledge base
-
-2. **`qdrant-knowledge`** (port 8001) - **OpenWebUI documents** (read-only)
-   - Access documents uploaded to OpenWebUI
-   - Search through shared team knowledge
-   - Read-only to prevent accidental changes
 
 ### Setup (2 minutes)
 
@@ -94,17 +81,14 @@ nano ~/.cursor/mcp.json
 
 # 3. Restart Cursor
 
-# 4. Test both servers
+# 4. Test
 @qdrant store "FlowTech-AI is awesome!"
 @qdrant find awesome
-
-@qdrant-knowledge find documentation
 ```
 
 **What you get:**
-- Store code snippets, notes, and context
+- Store code snippets, notes, and context in Qdrant
 - Retrieve information semantically during coding
-- Access OpenWebUI shared documents
 - AI-enhanced development with persistent memory
 
 ---

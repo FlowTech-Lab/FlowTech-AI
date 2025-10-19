@@ -388,7 +388,7 @@ services:
       qdrant:
         condition: service_started
 
-  # 10. SearxNG - Recherche web (optionnel)
+  # 10. SearxNG - Web search engine (optional)
   searxng:
     image: searxng/searxng:latest
     restart: unless-stopped
@@ -401,3 +401,31 @@ services:
       - ./AI_Data/searxng:/etc/searxng:rw
     ports:
       - "${SEARXNG_PORT:-8082}:8080"
+
+  # 11. Samba - Network share for Notes (Windows/Mac access)
+  samba:
+    image: ghcr.io/servercontainers/samba:latest
+    container_name: samba-notes
+    restart: unless-stopped
+    profiles:
+      - samba
+    network_mode: host
+    cap_add:
+      - CAP_NET_ADMIN
+    environment:
+      # Configuration de base
+      - TZ=Europe/Paris
+      - SAMBA_CONF_WORKGROUP=${SAMBA_WORKGROUP:-WORKGROUP}
+      - SAMBA_CONF_SERVER_STRING=FlowTech Server
+      - SAMBA_CONF_LOG_LEVEL=3
+      - AVAHI_NAME=DEV-FLOWTECH-LAB
+      
+      # Utilisateur
+      - ACCOUNT_admin=${SAMBA_PASSWORD}
+      - UID_admin=${SAMBA_UID:-1000}
+      
+      # Configuration du partage (depuis .env)
+      - SAMBA_VOLUME_CONFIG_notes=${CONFIG_NOTES}
+    volumes:
+      - ./Notes:/shares/notes:rw
+      - /etc/avahi/services:/external/avahi
