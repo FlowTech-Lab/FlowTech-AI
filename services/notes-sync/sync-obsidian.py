@@ -33,21 +33,21 @@ class Config:
     
     # Qdrant
     QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-    COLLECTION_NAME = os.getenv("NOTES_COLLECTION", "open-webui_knowledge")
+    COLLECTION_NAME = os.getenv("NOTES_COLLECTION", "cursor-knowledge")
     
     # Embedding
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-large-en-v1.5")
     VECTOR_SIZE = 1024  # BAAI/bge-large-en-v1.5
     
-    # Chemins (peut être monté en volume Docker)
-    NOTES_PATH = Path(os.getenv("NOTES_PATH", "/app/notes"))
+    # Paths (can be mounted as Docker volume)
+    NOTES_PATH = Path(os.getenv("NOTES_PATH", "/notes"))
     CACHE_PATH = Path(os.getenv("CACHE_PATH", os.path.expanduser("~/.cache/flowtech-ai")))
     
     # Chunking
     MAX_CHUNK_SIZE = 512  # tokens
     CHUNK_OVERLAP = 0.2  # 20% overlap
     
-    # Hash cache pour détection changements
+    # Hash cache for change detection
     HASH_CACHE_FILE = CACHE_PATH / "notes_hashes.json"
 
 
@@ -93,7 +93,7 @@ def chunk_by_sections(content: str, metadata: Dict, file_path: str) -> List[Dict
     # Split par sections ##
     sections = re.split(r'\n##\s+', content)
     
-    # Premier élément peut être avant le premier ##
+    # First element can be before the first ##
     if sections[0].strip():
         chunks.append({
             "text": sections[0].strip(),
@@ -139,7 +139,7 @@ def create_stable_id(file_path: str, chunk_index: int) -> str:
     """
     import uuid
     content = f"{file_path}::{chunk_index}"
-    # Créer UUID v5 (déterministe basé sur namespace + nom)
+    # Create UUID v5 (deterministic based on namespace + name)
     namespace = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')  # DNS namespace
     return str(uuid.uuid5(namespace, content))
 
@@ -212,21 +212,27 @@ class QdrantManager:
         if not chunks:
             return 0
         
-        # Génération des embeddings
+        # Generate embeddings
         texts = [chunk["text"] for chunk in chunks]
         embeddings = list(self.embedding_model.embed(texts))
         
-        # Création des points
+        # Create points
         points = []
-        vector_name = ""  # Vecteur par défaut
+        vector_name = ""  # Default vector
         
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
             point_id = create_stable_id(file_path, chunk["metadata"]["chunk_index"])
             
+            # Create complete payload with text AND metadata
+            payload = {
+                "text": chunk["text"],
+                **chunk["metadata"]
+            }
+            
             points.append(PointStruct(
                 id=point_id,
                 vector={vector_name: embedding.tolist()},
-                payload=chunk["metadata"]
+                payload=payload
             ))
         
         # Upsert dans Qdrant
@@ -275,7 +281,7 @@ class NotesSynchronizer:
         """Scanne tous les fichiers .md dans Notes/"""
         notes = []
         for md_file in Config.NOTES_PATH.rglob("*.md"):
-            # Ignorer les dossiers spéciaux
+            # Ignore special directories
             if any(part.startswith('_') or part.startswith('.') for part in md_file.parts):
                 continue
             notes.append(md_file)

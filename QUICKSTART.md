@@ -1,40 +1,40 @@
 # 🚀 FlowTech-AI - Quick Start Guide
 
-Démarrez la stack complète en **5 minutes** !
+Start the complete stack in **5 minutes**!
 
-## ⚡ Installation rapide
+## ⚡ Quick installation
 
 ```bash
-# 1. Clone le repo
+# 1. Clone the repo
 git clone https://github.com/flowtech/FlowTech-AI.git
 cd FlowTech-AI
 
-# 2. Configure (optionnel si valeurs par défaut OK)
+# 2. Configure (optional if default values OK)
 cp .env.example .env
-nano .env  # Ajuster si nécessaire
+nano .env  # Adjust if necessary
 
-# 3. Lance tout !
+# 3. Launch everything!
 ./init.sh
 
-# ✅ C'est tout ! Stack prête en 5 minutes
+# ✅ That's it! Stack ready in 5 minutes
 ```
 
-## 🎯 Services disponibles
+## 🎯 Available services
 
-Après `./init.sh`, vous avez accès à :
+After `./init.sh`, you have access to:
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **OpenWebUI** | http://localhost:8081 | Interface IA conversationnelle |
-| **Cursor MCP** | http://localhost:8000 | Integration Cursor IDE |
+| **OpenWebUI** | http://localhost:8081 | Conversational AI interface |
+| **Cursor MCP** | http://localhost:8000 | Cursor IDE integration |
 | **n8n** | http://localhost:5678 | Automation workflows |
 | **Qdrant** | http://localhost:6333 | Vector database |
 
-**Credentials** : Affichés à la fin de `init.sh`
+**Credentials**: Displayed at the end of `init.sh`
 
-## 🔧 Configuration Cursor
+## 🔧 Cursor Configuration
 
-### 1. Copier la config MCP
+### 1. Copy MCP config
 
 ```bash
 # Linux/Mac
@@ -44,202 +44,202 @@ cp config/mcp-config.json ~/.cursor/mcp.json
 copy config\mcp-config.json %USERPROFILE%\.cursor\mcp.json
 ```
 
-### 2. Éditer l'IP
+### 2. Edit the IP
 
 ```json
 {
   "mcpServers": {
     "qdrant": {
-      "url": "http://VOTRE_IP:8000/sse"  // ← Changer l'IP
+      "url": "http://YOUR_IP:8000/sse"  // ← Change the IP
     }
   }
 }
 ```
 
-### 3. Redémarrer Cursor
+### 3. Restart Cursor
 
-### 4. Tester
+### 4. Test
 
-Dans Cursor :
+In Cursor:
 ```
-@qdrant store "Test de la connexion MCP"
-@qdrant find test connexion
+@qdrant store "Test MCP connection"
+@qdrant find test connection
 ```
 
-✅ Si ça fonctionne, vous êtes prêt !
+✅ If it works, you're ready!
 
-## 📝 Configuration Obsidian (optionnel)
+## 📝 Obsidian Configuration (optional)
 
-### 1. Accès aux notes
+### 1. Access to notes
 
-**Option A - Partage réseau Samba** (RECOMMANDÉ pour LAN) :
+**Option A - Samba network share** (RECOMMENDED for LAN):
 ```bash
-# Activer Samba
+# Enable Samba
 docker compose up -d samba
 
-# Windows : Ouvrir \\SERVER_IP\notes dans Explorateur
-# Linux : sudo mount -t cifs //SERVER_IP/notes /mnt/notes
-# macOS : Finder → Connect to Server → smb://SERVER_IP/notes
+# Windows: Open \\SERVER_IP\notes in Explorer
+# Linux: sudo mount -t cifs //SERVER_IP/notes /mnt/notes
+# macOS: Finder → Connect to Server → smb://SERVER_IP/notes
 
-# Obsidian : Ouvrir le dossier réseau comme vault
+# Obsidian: Open network folder as vault
 ```
-✅ Temps réel, pas de sync  
-✅ Multi-utilisateurs
+✅ Real-time, no sync needed
+✅ Multi-user
 
-**Option B - Local** :
-- Vault local : `FlowTech-AI/Notes/`
+**Option B - Local**:
+- Local vault: `FlowTech-AI/Notes/`
 
-**Option C - Nextcloud** :
-- Sync avec `/Flow-Notes-AI/Notes/`
+**Option C - Nextcloud**:
+- Sync with `/Flow-Notes-AI/Notes/`
 
-Voir [docs/SAMBA-SHARE-GUIDE.md](docs/SAMBA-SHARE-GUIDE.md) pour configuration détaillée
+See [docs/SAMBA-SHARE-GUIDE.md](docs/SAMBA-SHARE-GUIDE.md) for detailed configuration
 
 ### 2. Templates
 
-Copiez les templates depuis `Notes/_Templates/` :
+Copy templates from `Notes/_Templates/`:
 - `vm-template.md`
 - `server-template.md`
 - `domain-template.md`
 
-### 3. Sync automatique
+### 3. Automatic sync
 
-**Option A - Cron** :
+**Option A - Cron**:
 ```bash
-# Toutes les 10 min
+# Every 10 minutes
 */10 * * * * cd /path/to/FlowTech-AI && python3 services/notes-sync/sync-obsidian.py
 ```
 
-**Option B - n8n** (recommandé) :
-- Créer workflow dans n8n (voir `workflows/obsidian-sync/README.md`)
+**Option B - n8n** (recommended):
+- Create workflow in n8n (see `workflows/obsidian-sync/README.md`)
 - Schedule trigger: 10 minutes
 
 ### 4. Test
 
 ```bash
-# Créer une note de test
+# Create a test note
 cp Notes/_Templates/vm-template.md Notes/VMs/VM-Test.md
 
-# Éditer frontmatter (ip, ram, etc.)
+# Edit frontmatter (ip, ram, etc.)
 
-# Sync manuel
+# Manual sync
 python3 services/notes-sync/sync-obsidian.py
 
-# Vérifier Qdrant
+# Check Qdrant
 curl http://localhost:6333/collections/notes-flowtech
 
-# Interroger via OpenWebUI
-# "Quelle est l'IP de VM-Test ?"
+# Query via OpenWebUI
+# "What is the IP of VM-Test?"
 ```
 
-## 🎯 Cas d'usage
+## 🎯 Use cases
 
-### Développeur avec Cursor
-
-```
-1. Coder dans Cursor
-2. @qdrant store pour sauver snippets
-3. @qdrant find pour retrouver contexte
-4. RAG enrichi avec vos notes techniques
-```
-
-### Gestion de notes techniques
+### Developer with Cursor
 
 ```
-1. Éditer notes dans Obsidian
-2. Sync automatique (10 min)
-3. Index auto-générés
-4. Interroger via OpenWebUI
+1. Code in Cursor
+2. @qdrant store to save snippets
+3. @qdrant find to retrieve context
+4. RAG enriched with your technical notes
 ```
 
-### Équipe (fork)
+### Technical notes management
 
 ```
-1. Clone le repo
+1. Edit notes in Obsidian
+2. Automatic sync (10 min)
+3. Auto-generated indexes
+4. Query via OpenWebUI
+```
+
+### Team (fork)
+
+```
+1. Clone the repo
 2. ./init.sh
 3. Configure Obsidian/Cursor
-4. Tout le monde partage la même base de connaissance
+4. Everyone shares the same knowledge base
 ```
 
-## 📊 Vérification
+## 📊 Verification
 
-### Stack opérationnelle ?
+### Stack operational?
 
 ```bash
 docker compose ps
-# ✅ Tous les services "Up (healthy)"
+# ✅ All services "Up (healthy)"
 ```
 
-### MCP-Qdrant fonctionne ?
+### MCP-Qdrant working?
 
 ```bash
 curl http://localhost:8000/sse
-# ✅ Retourne event stream
+# ✅ Returns event stream
 ```
 
-### Qdrant collections ?
+### Qdrant collections?
 
 ```bash
 curl http://localhost:6333/collections
-# ✅ Voir "cursor-context" et "notes-flowtech"
+# ✅ See "cursor-context" and "notes-flowtech"
 ```
 
 ## 🆘 Troubleshooting
 
-### Services ne démarrent pas
+### Services not starting
 
 ```bash
-# Vérifier logs
+# Check logs
 docker compose logs
 
-# Redémarrer proprement
+# Restart cleanly
 docker compose down
 ./init.sh
 ```
 
-### Cursor ne se connecte pas
+### Cursor not connecting
 
 ```bash
-# Vérifier IP dans ~/.cursor/mcp.json
-# Vérifier firewall
+# Check IP in ~/.cursor/mcp.json
+# Check firewall
 sudo ufw allow 8000
 
-# Tester endpoint
-curl http://VOTRE_IP:8000/sse
+# Test endpoint
+curl http://YOUR_IP:8000/sse
 ```
 
-### Notes pas synchronisées
+### Notes not synchronized
 
 ```bash
-# Test manuel
+# Manual test
 cd services/notes-sync
 python sync-obsidian.py
 
-# Vérifier NOTES_PATH
+# Check NOTES_PATH
 echo $NOTES_PATH
 
-# Vérifier collection
+# Check collection
 curl http://localhost:6333/collections/notes-flowtech
 ```
 
-## 📚 Documentation complète
+## 📚 Complete documentation
 
-- **Setup** : `docs/setup/` - Installation détaillée
-- **Architecture** : `docs/architecture/` - Vue technique
-- **Services** : `docs/services/` - Doc par service
-- **Notes** : `Notes/README-NOTES.md` - Guide notes
+- **Setup**: `docs/setup/` - Detailed installation
+- **Architecture**: `docs/architecture/` - Technical overview
+- **Services**: `docs/services/` - Service documentation
+- **Notes**: `Notes/README-NOTES.md` - Notes guide
 
-## 🎉 Et voilà !
+## 🎉 That's it!
 
-Vous avez maintenant :
-- ✅ Stack IA complète opérationnelle
+You now have:
+- ✅ Complete operational AI stack
 - ✅ Cursor integration (MCP-Qdrant)
-- ✅ OpenWebUI avec RAG
-- ✅ Sync notes automatique
-- ✅ Index auto-générés
+- ✅ OpenWebUI with RAG
+- ✅ Automatic notes sync
+- ✅ Auto-generated indexes
 
-**Temps total** : ~5 minutes ⚡
+**Total time**: ~5 minutes ⚡
 
 ---
 
-**Prochaines étapes** : Voir [README.md](README.md) pour aller plus loin !
+**Next steps**: See [README.md](README.md) to go further!
 

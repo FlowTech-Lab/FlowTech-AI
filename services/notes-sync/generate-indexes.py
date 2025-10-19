@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 FlowTech-AI Index Generator
-Génère automatiquement les index (VMs, Servers, Domains) depuis les frontmatters
+Automatically generates indexes (VMs, Servers, Domains) from frontmatters
 """
 
 import os
@@ -19,11 +19,11 @@ from collections import defaultdict
 # ========================================
 
 class Config:
-    """Configuration du générateur d'index"""
+    """Index generator configuration"""
     NOTES_PATH = Path(os.getenv("NOTES_PATH", "/app/notes"))
     INDEXES_PATH = NOTES_PATH / "_Indexes"
     
-    # Types de notes à indexer
+    # Note types to index
     INDEX_TYPES = {
         "vm": {"folder": "VMs", "title": "Virtual Machines", "icon": "🖥️"},
         "server": {"folder": "Servers", "title": "Servers", "icon": "🖧"},
@@ -33,17 +33,17 @@ class Config:
 
 
 # ========================================
-# GÉNÉRATEUR D'INDEX
+# INDEX GENERATOR
 # ========================================
 
 class IndexGenerator:
-    """Génère les fichiers d'index automatiquement"""
+    """Automatically generates index files"""
     
     def __init__(self):
         self.notes_by_type = defaultdict(list)
     
     def parse_frontmatter(self, file_path: Path) -> Dict:
-        """Parse le frontmatter YAML d'un fichier"""
+        """Parse YAML frontmatter from a file"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -55,16 +55,16 @@ class IndexGenerator:
                 metadata = yaml.safe_load(match.group(1))
                 return metadata or {}
         except Exception as e:
-            print(f"⚠️  Erreur parsing {file_path.name}: {e}")
+            print(f"⚠️  Parsing error {file_path.name}: {e}")
         
         return {}
     
     def scan_notes(self):
-        """Scanne toutes les notes et les regroupe par type"""
-        print(f"📂 Scan du répertoire : {Config.NOTES_PATH}")
+        """Scan all notes and group them by type"""
+        print(f"📂 Directory scan: {Config.NOTES_PATH}")
         
         for md_file in Config.NOTES_PATH.rglob("*.md"):
-            # Ignorer dossiers spéciaux
+            # Ignore special directories
             if any(part.startswith('_') or part.startswith('.') for part in md_file.parts):
                 continue
             
@@ -80,12 +80,12 @@ class IndexGenerator:
                 }
                 self.notes_by_type[note_type].append(note_info)
         
-        print(f"✅ Notes trouvées: {sum(len(notes) for notes in self.notes_by_type.values())}")
+        print(f"✅ Notes found: {sum(len(notes) for notes in self.notes_by_type.values())}")
         for note_type, notes in self.notes_by_type.items():
             print(f"   - {note_type}: {len(notes)}")
     
     def generate_vm_index(self) -> str:
-        """Génère l'index des VMs"""
+        """Generate VMs index"""
         vms = sorted(self.notes_by_type.get('vm', []), 
                     key=lambda x: x['metadata'].get('name', ''))
         
@@ -97,11 +97,11 @@ class IndexGenerator:
             f"updated: {datetime.utcnow().isoformat()}Z",
             "---",
             "",
-            "# 🖥️ Index des Virtual Machines",
+            "# 🖥️ Virtual Machines Index",
             "",
             f"**Total : {len(vms)} VMs**",
             "",
-            "| VM | IP | RAM | CPU | Services | Status | Fichier |",
+            "| VM | IP | RAM | CPU | Services | Status | File |",
             "|----|----|-----|-----|----------|--------|---------|"
         ]
         
@@ -120,13 +120,13 @@ class IndexGenerator:
         lines.extend([
             "",
             "---",
-            f"*Auto-généré le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Ne pas éditer manuellement*"
+            f"*Auto-generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Do not edit manually*"
         ])
         
         return "\n".join(lines)
     
     def generate_server_index(self) -> str:
-        """Génère l'index des serveurs"""
+        """Generate servers index"""
         servers = sorted(self.notes_by_type.get('server', []),
                         key=lambda x: x['metadata'].get('name', ''))
         
@@ -138,11 +138,11 @@ class IndexGenerator:
             f"updated: {datetime.utcnow().isoformat()}Z",
             "---",
             "",
-            "# 🖧 Index des Serveurs",
+            "# 🖧 Servers Index",
             "",
-            f"**Total : {len(servers)} serveurs**",
+            f"**Total : {len(servers)} servers**",
             "",
-            "| Serveur | IP | Type | Status | Fichier |",
+            "| Server | IP | Type | Status | File |",
             "|---------|----|----|--------|---------|"
         ]
         
@@ -159,13 +159,13 @@ class IndexGenerator:
         lines.extend([
             "",
             "---",
-            f"*Auto-généré le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
+            f"*Auto-generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
         ])
         
         return "\n".join(lines)
     
     def generate_domain_index(self) -> str:
-        """Génère l'index des domaines"""
+        """Generate domains index"""
         domains = sorted(self.notes_by_type.get('domain', []),
                         key=lambda x: x['metadata'].get('name', ''))
         
@@ -177,11 +177,11 @@ class IndexGenerator:
             f"updated: {datetime.utcnow().isoformat()}Z",
             "---",
             "",
-            "# 🌐 Index des Domaines",
+            "# 🌐 Domains Index",
             "",
-            f"**Total : {len(domains)} domaines**",
+            f"**Total : {len(domains)} domains**",
             "",
-            "| Domaine | IP | Type | Status | Fichier |",
+            "| Domain | IP | Type | Status | File |",
             "|---------|----|----|--------|---------|"
         ]
         
@@ -198,23 +198,23 @@ class IndexGenerator:
         lines.extend([
             "",
             "---",
-            f"*Auto-généré le {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
+            f"*Auto-generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
         ])
         
         return "\n".join(lines)
     
     def save_index(self, filename: str, content: str):
-        """Sauvegarde un fichier d'index"""
+        """Save an index file"""
         Config.INDEXES_PATH.mkdir(parents=True, exist_ok=True)
         index_path = Config.INDEXES_PATH / filename
         
         with open(index_path, 'w', encoding='utf-8') as f:
             f.write(content)
         
-        print(f"✅ Index généré : {filename}")
+        print(f"✅ Index generated: {filename}")
     
     def generate_all(self):
-        """Génère tous les index"""
+        """Generate all indexes"""
         print("=" * 80)
         print("📋 FlowTech-AI Index Generator")
         print("=" * 80)
@@ -222,8 +222,8 @@ class IndexGenerator:
         # Scan
         self.scan_notes()
         
-        # Génération
-        print("\n📝 Génération des index...")
+        # Generation
+        print("\n📝 Generating indexes...")
         
         if 'vm' in self.notes_by_type:
             self.save_index("VMs-Index.md", self.generate_vm_index())
@@ -234,7 +234,7 @@ class IndexGenerator:
         if 'domain' in self.notes_by_type:
             self.save_index("Domains-Index.md", self.generate_domain_index())
         
-        print("\n✅ Tous les index ont été générés !")
+        print("\n✅ All indexes have been generated!")
         print("=" * 80)
 
 
@@ -243,15 +243,15 @@ class IndexGenerator:
 # ========================================
 
 def main():
-    """Point d'entrée"""
+    """Entry point"""
     try:
         generator = IndexGenerator()
         generator.generate_all()
     except KeyboardInterrupt:
-        print("\n⚠️  Interruption utilisateur")
+        print("\n⚠️  User interruption")
         sys.exit(130)
     except Exception as e:
-        print(f"\n❌ Erreur fatale: {e}")
+        print(f"\n❌ Fatal error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

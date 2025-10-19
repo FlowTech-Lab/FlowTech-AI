@@ -249,7 +249,7 @@ handle_exit() {
   exit $exit_code
 }
 
-# Vérification des dépendances
+# Dependencies check
 check_dependency() {
   local cmd="$1"
   if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -259,7 +259,7 @@ check_dependency() {
   log_ok "$cmd disponible"
 }
 
-# Gestion des variables d'environnement optimisée
+# Optimized environment variables management
 get_env_value() {
   local key="$1"
   grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n1 | cut -d= -f2- || echo ""
@@ -294,7 +294,7 @@ bulk_set_env() {
   done
 }
 
-# Encodage URL optimisé
+# Optimized URL encoding
 
 # Attente HTTP avec timeout et retry
 wait_for_http() {
@@ -321,13 +321,13 @@ wait_for_http() {
   return 1
 }
 
-# Fonctions de logging colorées
+# Colored logging functions
 log_info() { printf "${BLUE}[INFO ]${RESET} %s\n" "$*"; }
 log_ok()   { printf "${GREEN}[ OK  ]${RESET} %s\n" "$*"; }
 log_warn() { printf "${YELLOW}[WARN ]${RESET} %s\n" "$*"; }
 log_error() { printf "${RED}[ERROR]${RESET} %s\n" "$*"; }
 
-# Exécution de commandes avec timeout et logging
+# Command execution with timeout and logging
 run_with_timeout() {
   local timeout="${1:-20}"
   shift
@@ -345,13 +345,13 @@ run_with_timeout() {
   fi
 }
 
-# Affichage des étapes
+# Steps display
 next_step() {
   STEP=$((STEP + 1))
   printf "\n${BOLD}>>> Étape %d/%d:${RESET} %s\n" "$STEP" "$TOTAL_STEPS" "$*"
 }
 
-# Vérification de l'espace disque
+# Disk space check
 check_disk_space() {
   local available_space
   available_space=$(df -Pk . | tail -1 | awk '{print $4}')
@@ -366,7 +366,7 @@ check_disk_space() {
   return 0
 }
 
-# Gestion des permissions optimisée
+# Optimized permissions management
 set_secure_permissions() {
   local dir="$1"
   local dir_mode="${2:-700}"
@@ -379,46 +379,46 @@ set_secure_permissions() {
   fi
 }
 
-# Vérification et création des fichiers requis
+# Required files check and creation
 ensure_required_files() {
   log_info "Vérification des fichiers requis"
   
-  # Vérification des prérequis système
+  # System prerequisites check
   log_info "Vérification des prérequis système"
   
   log_ok "Fichiers requis présents et exécutables"
 }
 
 
-# Correction du docker-compose.yml pour supprimer les volumes problématiques
+# docker-compose.yml correction to remove problematic volumes
 fix_docker_compose() {
   log_info "Correction du fichier docker-compose.yml"
   
   # Sauvegarder le fichier original
   cp docker-compose.yml docker-compose.yml.backup 2>/dev/null || true
   
-  # Configuration docker-compose.yml optimisée
+  # Optimized docker-compose.yml configuration
   log_info "Configuration docker-compose.yml optimisée"
   
   log_ok "Fichier docker-compose.yml configuré"
 }
 
 
-# Nettoyage des conteneurs (avec option de suppression des données)
+# Container cleanup (with data deletion option)
 cleanup_containers() {
   log_info "Nettoyage des conteneurs"
   
-  # Arrêter et supprimer tous les conteneurs du projet
+  # Stop and remove all project containers
   docker compose down --remove-orphans --volumes 2>/dev/null || true
   
-  # Nettoyer les images non utilisées seulement
+  # Clean unused images only
   docker system prune -f 2>/dev/null || true
   
   # Suppression conditionnelle (DEV ONLY!)
   if [ "$DEV_MODE" = "true" ]; then
     log_warn "⚠️  MODE DÉVELOPPEMENT: Suppression complète activée"
     
-    # Supprimer complètement le répertoire AI_Data
+    # Completely remove AI_Data directory
     if [ -d "$AI_DATA_DIR" ]; then
       log_info "Suppression du répertoire AI_Data"
       sudo rm -rf "$AI_DATA_DIR" 2>/dev/null || rm -rf "$AI_DATA_DIR"
@@ -439,7 +439,7 @@ cleanup_containers() {
       log_ok "Répertoire logs supprimé"
     fi
     
-    # Nettoyer complètement le système Docker (sans supprimer les images)
+    # Completely clean Docker system (without deleting images)
     docker system prune -f --volumes 2>/dev/null || true
     
     log_ok "Nettoyage complet terminé (MODE DEV)"
@@ -450,7 +450,7 @@ cleanup_containers() {
 }
 
 
-# Affichage du résumé final
+# Final summary display
 show_final_summary() {
   log_ok "🎉 FlowTech-AI est maintenant opérationnel !"
   echo
@@ -464,7 +464,7 @@ show_final_summary() {
   echo "  🔌 MCP-Qdrant (Cursor):          http://localhost:$(get_env_value MCP_QDRANT_PORT)"
   echo "  📊 ClickHouse (Analytics):       http://localhost:8123"
   
-  # Afficher Samba si configuré
+  # Display Samba if configured
   if [ -n "$(get_env_value SAMBA_PASSWORD)" ]; then
     echo "  📁 Samba Share (Notes):          \\\\SERVER_IP\\notes (SMB)"
   fi
@@ -474,7 +474,7 @@ show_final_summary() {
   echo "  • N8N: $(get_env_value N8N_BASIC_AUTH_USER) / $(get_env_value N8N_BASIC_AUTH_PASSWORD)"
   echo "  • N8N Bearer Token: $(get_env_value N8N_SECURITY_API_BEARER_AUTH)"
   
-  # Afficher credentials Samba si configuré
+  # Display Samba credentials if configured
   if [ -n "$(get_env_value SAMBA_PASSWORD)" ]; then
     echo "  • Samba Share: $(get_env_value SAMBA_USER) / $(get_env_value SAMBA_PASSWORD)"
     echo "    → Access: \\\\SERVER_IP\\notes (Windows) or smb://SERVER_IP/notes (Mac/Linux)"
@@ -535,13 +535,13 @@ main() {
   fi
   log_ok "Plugin docker compose détecté"
   
-  # Étape 1.5: Vérification de l'espace disque
+  # Step 1.5: Disk space check
   next_step "Vérification de l'espace disque"
   if ! check_disk_space; then
     exit 1
   fi
   
-  # Vérification des fichiers requis
+  # Required files check
   ensure_required_files
   
   # Correction du docker-compose.yml
@@ -552,7 +552,7 @@ umask 077
   log_info "Création du fichier .env"
   touch "$ENV_FILE"
   
-  # Vérification des permissions Docker
+  # Docker permissions check
   if ! docker info >/dev/null 2>&1; then
     log_error "Permissions Docker insuffisantes"
     log_info "Ajoutez votre utilisateur au groupe docker:"
@@ -563,40 +563,40 @@ umask 077
   # Nettoyage des conteneurs existants
   cleanup_containers
   
-  # Étape 2.5: Téléchargement des images Docker
+  # Step 2.5: Docker images download
   next_step "Téléchargement des images Docker"
   if ! pull_docker_images; then
     exit 1
   fi
   
-  # Étape 2: Préparation des répertoires
+  # Step 2: Directories preparation
   next_step "Préparation des répertoires de données"
   local uid gid
   uid=$(id -u)
   gid=$(id -g)
   
-  # Création des répertoires avec structure optimisée
+  # Create directories with optimized structure
   local dirs=("openwebui" "n8n" "searxng" "qdrant" "clickhouse" "clickhouse-logs" "minio" "pgdata" "postgres-init" "redis")
   for dir in "${dirs[@]}"; do
     mkdir -p "${AI_DATA_DIR}/$dir"
   done
   
-  # Application des permissions sécurisées
+  # Apply secure permissions
 for dir in openwebui n8n qdrant pgdata redis; do
     set_secure_permissions "${AI_DATA_DIR}/$dir" 700 600
   done
   
-  # Permissions spéciales pour ClickHouse (utilisateur 101:101)
+  # Special permissions for ClickHouse (user 101:101)
   sudo chown -R 101:101 "${AI_DATA_DIR}/clickhouse" "${AI_DATA_DIR}/clickhouse-logs" 2>/dev/null || true
   sudo chmod -R 755 "${AI_DATA_DIR}/clickhouse" "${AI_DATA_DIR}/clickhouse-logs" 2>/dev/null || true
   log_info "Permissions ClickHouse configurées (utilisateur 101:101)"
   
-  # Permissions spéciales pour MinIO (utilisateur 1000:1000)
+  # Special permissions for MinIO (user 1000:1000)
   sudo chown -R 1000:1000 "${AI_DATA_DIR}/minio" 2>/dev/null || true
   sudo chmod -R 755 "${AI_DATA_DIR}/minio" 2>/dev/null || true
   log_info "Permissions MinIO configurées (utilisateur 1000:1000)"
   
-  # Permissions spéciales pour SearxNG
+  # Special permissions for SearxNG
   set_secure_permissions "${AI_DATA_DIR}/searxng" 755 644
   
   # Permissions PostgreSQL
@@ -616,10 +616,10 @@ fi
   
   log_ok "Répertoires AI_Data préparés avec permissions sécurisées"
 
-  # Vérification de l'espace disque
+  # Disk space check
   check_disk_space || log_warn "Continuez avec prudence - espace disque limité"
 
-  # Étape 3: Configuration SearxNG
+  # Step 3: SearxNG configuration
   next_step "Synchronisation de la configuration SearxNG"
 mkdir -p searxng
   
@@ -644,7 +644,7 @@ if [ -d searxng ]; then
   
   log_ok "Templates SearxNG copiés"
   
-  # Étape 4: Variables d'environnement de base
+  # Step 4: Base environment variables
   next_step "Configuration des variables d'environnement de base"
   bulk_set_env ensure \
   OLLAMA_BASE_URL="http://192.168.0.2:11434" \
@@ -659,7 +659,7 @@ if [ -d searxng ]; then
   LANGFUSE_INIT_PROJECT_RETENTION="30" \
   TZ="Europe/Paris"
   
-  # Génération du mot de passe PostgreSQL
+  # PostgreSQL password generation
   if [ -z "$(get_env_value POSTGRES_PASSWORD)" ]; then
     local pg_password
     pg_password=$(openssl rand -hex 24)
@@ -670,7 +670,7 @@ if [ -d searxng ]; then
   set_env_value LANGFUSE_HOST "http://langfuse:3000" enforce
   log_ok "Variables d'environnement de base configurées"
   
-  # Configuration Samba Share (optionnel - partage réseau Notes)
+  # Samba Share configuration (optional - network Notes sharing)
   if [ -z "$(get_env_value SAMBA_PASSWORD)" ]; then
     local samba_password
     samba_password=$(openssl rand -base64 24)
@@ -682,10 +682,10 @@ if [ -d searxng ]; then
     log_info "Samba Share credentials générés (pour accès réseau aux notes)"
   fi
   
-  # Étape 5: Configuration des secrets Langfuse
+  # Step 5: Langfuse secrets configuration
   next_step "Configuration des identifiants Langfuse"
   
-  # Génération des secrets si nécessaire
+  # Generate secrets if necessary
   local secrets=(
     "LANGFUSE_NEXTAUTH_SECRET:$(openssl rand -hex 32)"
     "LANGFUSE_SALT:$(openssl rand -hex 16)"
@@ -704,7 +704,7 @@ if [ -d searxng ]; then
   
   bulk_set_env ensure LANGFUSE_PUBLIC_KEY="" LANGFUSE_SECRET_KEY=""
   
-  # Configuration de l'URL de base de données Langfuse
+  # Langfuse database URL configuration
   local lf_db_user lf_db_pass
   lf_db_user=$(get_env_value POSTGRES_USER)
   [ -z "$lf_db_user" ] && lf_db_user="n8n"
@@ -715,17 +715,17 @@ if [ -d searxng ]; then
   
   log_ok "URL de base de données Langfuse configurée"
   
-  # Étape 6: Configuration par défaut Langfuse headless
+  # Step 6: Default Langfuse headless configuration
   next_step "Préparation des paramètres par défaut Langfuse headless"
   
   local org_id="${LANGFUSE_INIT_ORG_ID:-FlowTech-LAB}"
   local proj_id="${LANGFUSE_INIT_PROJECT_ID:-default}"
   local user_name="${LANGFUSE_INIT_USER_NAME:-Admin}"
   
-  # Demander l'email de l'utilisateur si pas défini
+  # Ask for user email if not defined
   local user_mail
   if [ -z "$(get_env_value LANGFUSE_INIT_USER_EMAIL)" ]; then
-    # Mode interactif par défaut (sauf si FORCE_NON_INTERACTIVE=true)
+    # Interactive mode by default (unless FORCE_NON_INTERACTIVE=true)
     if [ "$FORCE_NON_INTERACTIVE" != "true" ]; then
       printf "\n${YELLOW}Langfuse Configuration - User Email${RESET}\n"
       printf "Enter the email for the Langfuse administrator user: "
@@ -750,7 +750,7 @@ if [ -d searxng ]; then
     log_info "Langfuse user email already configured: $user_mail"
   fi
   
-  # Génération du mot de passe si nécessaire
+  # Generate password if necessary
   if [ -z "$(get_env_value LANGFUSE_INIT_USER_PASSWORD)" ]; then
     local user_password
     if [ "$FORCE_NON_INTERACTIVE" != "true" ]; then
@@ -786,7 +786,7 @@ if [ -d searxng ]; then
     log_info "Clé API secrète Langfuse générée"
   fi
   
-  # Génération des variables n8n
+  # Generate n8n variables
   if [ -z "$(get_env_value N8N_BASIC_AUTH_USER)" ]; then
     set_env_value N8N_BASIC_AUTH_USER "admin" enforce
     log_info "Utilisateur n8n configuré"
@@ -799,7 +799,7 @@ if [ -d searxng ]; then
     log_info "Mot de passe n8n généré"
   fi
   
-  # Génération de la clé API Bearer pour n8n
+  # Generate Bearer API key for n8n
   if [ -z "$(get_env_value N8N_SECURITY_API_BEARER_AUTH)" ]; then
     local n8n_bearer_auth
     n8n_bearer_auth=$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 48)
@@ -807,7 +807,7 @@ if [ -d searxng ]; then
     log_info "Clé API Bearer n8n générée"
   fi
   
-  # Configuration des paramètres par défaut
+  # Default parameters configuration
   bulk_set_env ensure \
     LANGFUSE_INIT_ORG_ID="$org_id" \
     LANGFUSE_INIT_ORG_NAME="FlowTech-LAB" \
@@ -817,7 +817,7 @@ if [ -d searxng ]; then
     LANGFUSE_INIT_USER_NAME="$user_name" \
     LANGFUSE_INIT_PROJECT_RETENTION="30"
   
-  # Synchronisation des clés publiques/secrètes
+  # Public/secret keys synchronization
   local public_key_value secret_key_value
   public_key_value=$(get_env_value LANGFUSE_PUBLIC_KEY)
   secret_key_value=$(get_env_value LANGFUSE_SECRET_KEY)
@@ -827,7 +827,7 @@ if [ -d searxng ]; then
   
   log_ok "Paramètres par défaut Langfuse headless configurés"
   
-  # Étape 7: Configuration des services Langfuse (ClickHouse, Redis, MinIO)
+  # Step 7: Langfuse services configuration (ClickHouse, Redis, MinIO)
   next_step "Configuration des services Langfuse"
   
   # Variables ClickHouse
@@ -856,15 +856,15 @@ if [ -d searxng ]; then
   
   log_ok "Services Langfuse configurés"
   
-  # Étape 8: Démarrage de tous les services
+  # Step 8: Start all services
   next_step "Démarrage de tous les services"
   
-  # En mode DEV, supprimer la base de données AVANT de démarrer Langfuse
+  # In DEV mode, delete database BEFORE starting Langfuse
   if [ "$DEV_MODE" = "true" ]; then
     log_info "Mode DEV: Démarrage de PostgreSQL seul pour nettoyer la base"
     docker compose up -d postgres
     
-    # Attendre PostgreSQL et supprimer la base de données
+    # Wait for PostgreSQL and delete database
     log_info "Attente de PostgreSQL..."
     local count=0
     while [ $count -lt 30 ]; do
@@ -885,10 +885,10 @@ if [ -d searxng ]; then
     fi
   fi
   
-  # Démarrage de tous les services (ordre géré par depends_on dans docker-compose.yml)
+  # Start all services (order managed by depends_on in docker-compose.yml)
   next_step "Démarrage de tous les services (ordre optimisé)"
   
-  # Inclure profil samba si configuré
+  # Include samba profile if configured
   local compose_cmd="docker compose"
   if [ -n "$(get_env_value SAMBA_PASSWORD)" ]; then
     compose_cmd="docker compose --profile samba"
@@ -897,7 +897,7 @@ if [ -d searxng ]; then
   
   run_with_timeout "$SERVICE_START_TIMEOUT" "$compose_cmd up -d"
   
-  # Attendre que tous les services soient prêts
+  # Wait for all services to be ready
   log_info "Attente de la stabilisation des services (60s)..."
   sleep 60
   
@@ -922,7 +922,7 @@ if [ -d searxng ]; then
     log_warn "Langfuse n'est pas encore disponible, mais les services sont démarrés"
   fi
   
-  # Vérifications de santé rapides
+  # Quick health checks
   log_info "Vérifications de santé rapides"
   run_with_timeout 10 "docker compose ps"
   
@@ -950,6 +950,6 @@ if [ -d searxng ]; then
 }
 
 # =============================================================================
-# Point d'entrée principal
+# Main entry point
 # =============================================================================
 main "$@"
