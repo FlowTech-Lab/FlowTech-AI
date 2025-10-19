@@ -1,141 +1,162 @@
-# 📝 FlowTech-AI Notes - Guide d'utilisation
+# 📝 Notes Templates for Obsidian
 
-## 🎯 Structure
+This directory contains **generic templates** for organizing your technical notes in Obsidian.
+
+## 🎯 Purpose
+
+These templates help you maintain consistent documentation for:
+- 🖥️ Virtual Machines
+- 🖧 Servers
+- 🌐 Domains
+- 📁 Projects
+
+## 📁 Directory Structure
 
 ```
 Notes/
-├── _Templates/          # Templates pour nouvelles notes
+├── _Templates/           # ← Templates (included in repo)
 │   ├── vm-template.md
 │   ├── server-template.md
 │   └── domain-template.md
 │
-├── _Indexes/            # Index auto-générés (ne pas éditer!)
-│   ├── VMs-Index.md
-│   ├── Servers-Index.md
-│   └── Domains-Index.md
-│
-├── VMs/                 # Notes des VMs
-├── Servers/             # Notes des serveurs
-├── Domains/             # Notes des domaines
-├── Projects/            # Notes de projets
-└── Daily/               # Notes quotidiennes
+└── README-NOTES.md      # ← This file
 ```
 
 ## 🚀 Quick Start
 
-### 1. Créer une nouvelle VM
+### 1. Open in Obsidian
 
-```bash
-# Copy template
-cp _Templates/vm-template.md VMs/VM-001-MyApp.md
+- **Option A**: Use `Notes/` folder as vault
+- **Option B**: Link this folder to your existing vault
 
-# Edit in Obsidian
-# - Fill frontmatter (ip, ram, cpu, etc.)
-# - Add description
-# - Save
-```
+### 2. Use Templates
 
-### 2. Synchronisation automatique
+1. Copy a template from `_Templates/`
+2. Rename it (e.g., `VM-WebServer-01.md`)
+3. Fill in the frontmatter metadata
+4. Add your content
 
-Toutes les 10 minutes, le système :
-- ✅ Détecte les changements (hash MD5)
-- ✅ Met à jour Qdrant RAG
-- ✅ Régénère les index
-
-### 3. Utilisation du RAG
-
-**Dans OpenWebUI** :
-```
-User: "What is the IP of the database VM?"
-AI: "The database VM (VM-002-Database) is at IP 192.168.1.101"
-```
-
-**Dans Cursor** :
-```
-@qdrant find information about VM 001
-```
-
-## 📋 Frontmatter requis
-
-```yaml
----
-type: vm | server | domain | project | note
-name: Descriptive-Name
-ip: 192.168.1.XXX            # (if applicable)
-status: active | hold | done
-created: 2025-10-18
-updated: 2025-10-18          # Auto ou manuel
-tags: [tag1, tag2, ...]
----
-```
-
-## 🔗 Bonnes pratiques
-
-### Liens Obsidian
+### 3. Example Usage
 
 ```markdown
-- Reference a VM: [[VM-001-Example]]
-- With alias: [[VM-001-Example|VM 001]]
-- Reference section: [[VM-001-Example#Configuration]]
+---
+type: vm
+name: WebServer-01
+ip: 192.168.1.100
+ram_gib: 8
+cpu: 4
+status: active
+services:
+  - nginx
+  - postgresql
+created: 2025-01-15
+---
+
+# WebServer-01
+
+## Description
+Production web server hosting main application.
+
+## Configuration
+- OS: Ubuntu 22.04
+- Docker: Yes
+- Backup: Daily at 2 AM
+
+## Access
+ssh admin@192.168.1.100
 ```
 
-### Organisation
+## 🔗 Integration with FlowTech-AI
 
-- **1 entité = 1 note** (VM, serveur, domaine)
-- **Frontmatter complet** (pour index automatique)
-- **Sections structurées** avec `##` niveau 2
-- **Tags cohérents** (aide la recherche sémantique)
+### Manual Upload to OpenWebUI
 
-### Index auto-générés
+1. Save your notes
+2. Open http://localhost:8081
+3. Create a chat
+4. Click **"Knowledge"** → **"Upload Files"**
+5. Select your .md files
+6. Ask questions about your infrastructure!
 
-⚠️ **Ne jamais éditer** les fichiers dans `_Indexes/` !
-- Ils sont regénérés automatiquement
-- Vos changements seront écrasés
-- Modifier les frontmatters à la source à la place
+### Advanced: Automated Sync
 
-## 🎯 Workflow recommandé
+For automated synchronization with Qdrant (RAG), see:
+👉 **[Flow-Notes-AI](https://github.com/FlowTech-Lab/Flow-Notes-AI)** - Companion repo with sync scripts
 
-### Édition quotidienne
+## 📋 Template Fields
 
+### VM Template
+- `type`: vm
+- `name`: Machine name
+- `ip`: IP address
+- `ram_gib`: RAM in GB
+- `cpu`: Number of CPUs
+- `status`: active/inactive/maintenance
+- `services`: List of running services
+
+### Server Template
+- `type`: server
+- `name`: Server name
+- `ip`: IP address
+- `server_type`: web/db/app/etc
+- `status`: active/inactive/maintenance
+- `services`: List of services
+
+### Domain Template
+- `type`: domain
+- `name`: Domain name
+- `ip`: Resolved IP
+- `domain_type`: public/internal
+- `status`: active/expired/pending
+- `services`: Associated services
+
+## 🎨 Customization
+
+Feel free to customize templates for your needs:
+
+1. Add more fields in frontmatter
+2. Create new templates for other resource types
+3. Modify sections structure
+4. Add diagrams with Mermaid
+
+Example custom field:
+```yaml
+---
+type: vm
+name: MyVM
+tags: [production, critical, web]
+owner: dev-team
+backup_strategy: daily
+monitoring: prometheus
+---
 ```
-1. Ouvrir Obsidian
-2. Créer/éditer vos notes
-3. Sauvegarder (Ctrl+S)
-4. Sync Nextcloud automatique
-5. RAG update automatique (10 min max)
-6. Interroger via OpenWebUI ou Cursor
-```
 
-### Création de nouvelle VM
+## 📚 Best Practices
 
-```
-1. Copier template
-2. Remplir frontmatter
-3. Ajouter description
-4. Sauvegarder
-5. Index auto-généré dans 10 min
-6. Visible dans VMs-Index.md
-```
+✅ **Consistent naming**: Use a naming convention (e.g., `VM-WebServer-01`)  
+✅ **Tags**: Use frontmatter tags for easy filtering  
+✅ **Links**: Use `[[links]]` to connect related notes  
+✅ **Update dates**: Keep `updated:` field current  
+✅ **Status**: Always maintain status field  
 
-## 🔍 Recherche sémantique
+## 🔍 Search & Query
 
-Le RAG permet des requêtes naturelles :
+With Obsidian:
+- Search by tags: `tag:#production`
+- Dataview queries: Extract data from frontmatter
+- Graph view: Visualize connections
 
-- "Quelles VMs ont plus de 32GB de RAM ?"
-- "Quel serveur héberge Nextcloud ?"
-- "Liste des domaines SSL actifs"
-- "Configuration Docker sur VM 407"
+With OpenWebUI RAG:
+- "Show me all production VMs"
+- "Which servers need maintenance?"
+- "What services run on 192.168.1.100?"
 
-## 📊 Collections Qdrant
+## 🤝 Contributing
 
-| Collection | Contenu | Usage |
-|------------|---------|-------|
-| `notes-flowtech` | Vos notes Obsidian | OpenWebUI RAG |
-| `cursor-context` | Snippets code Cursor | Cursor MCP |
-
-**Séparation totale** = pas de pollution !
+Found a useful template structure? Feel free to:
+1. Fork FlowTech-AI
+2. Add your template to `_Templates/`
+3. Submit a pull request
 
 ---
 
-**⭐ Astuce** : Gardez vos frontmatters à jour, les index seront toujours corrects !
-
+**Happy note-taking! 📝**

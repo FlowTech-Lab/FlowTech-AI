@@ -7,7 +7,7 @@ volumes:
     driver: local
 
 services:
-  # 1. Postgres - Base de données principale
+  # 1. Postgres - Main database
   postgres:
     image: docker.io/postgres:${POSTGRES_VERSION:-latest}
     container_name: flowtech-ai-postgres-1
@@ -68,7 +68,7 @@ services:
       retries: 5
       start_period: 10s
 
-  # 4. ClickHouse - Base de données analytique
+  # 4. ClickHouse - Analytics database
   clickhouse:
     image: docker.io/clickhouse/clickhouse-server
     container_name: clickhouse
@@ -92,7 +92,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 5. Qdrant - Mémoire vectorielle
+  # 5. Qdrant - Vector memory
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
@@ -110,6 +110,7 @@ services:
       - QDRANT__SERVICE__GRPC_PORT=6334
 
   # 5.1. MCP-Qdrant - Model Context Protocol Server for Cursor
+  # MCP-Qdrant : Collection cursor-context (read/write) for code
   # Uses BAAI/bge-large-en-v1.5 (1024 dims, 1.2GB) via FastEmbed (Production-ready)
   mcp-qdrant:
     build:
@@ -128,9 +129,8 @@ services:
     environment:
       - QDRANT_URL=http://qdrant:6333
       - COLLECTION_NAME=${MCP_QDRANT_COLLECTION:-cursor-context}
-      - EMBEDDING_MODEL=${FASTEMBED_MODEL:-BAAI/bge-large-en-v1.5}
+      - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
       - EMBEDDING_PROVIDER=fastembed
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
       - FASTMCP_PORT=8000
       - FASTMCP_HOST=0.0.0.0
     volumes:
@@ -143,6 +143,41 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
+
+  # MCP-Qdrant-Knowledge : Collection cursor-knowledge (read/write) for notes
+  # Synchronise automatiquement les notes du dossier Notes/ avec FastEmbed
+  mcp-qdrant-knowledge:
+    build:
+      context: ./mcp-qdrant
+      dockerfile: Dockerfile
+    image: flowtech/mcp-qdrant:latest
+    container_name: mcp-qdrant-knowledge
+    restart: unless-stopped
+    networks:
+      - flow-ai-network
+    depends_on:
+      qdrant:
+        condition: service_started
+    ports:
+      - "${MCP_QDRANT_KNOWLEDGE_PORT:-8001}:8000"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - COLLECTION_NAME=cursor-knowledge
+      - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
+      - EMBEDDING_PROVIDER=fastembed
+      - FASTMCP_PORT=8000
+      - FASTMCP_HOST=0.0.0.0
+    volumes:
+      - ./AI_Data/mcp-qdrant-knowledge:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
 
   # 6. Langfuse-worker - Migrations et traitement
   langfuse-worker:
@@ -331,12 +366,20 @@ services:
     networks:
       - flow-ai-network
     environment:
-      # Base LLM (Ollama par défaut)
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
-      # Activation de la mémoire vectorielle
+      # Base LLM (Ollama default)
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://192.168.0.2:11434}
+      # Vector memory activation
       - VECTOR_DB=qdrant
       - QDRANT_URI=http://qdrant:6333
       - RAG_VECTOR_DB=qdrant
+      # Configuration RAG
+      - RAG_EMBEDDING_MODEL=bge-m3:567m
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_OPENAI_BATCH_SIZE=1
+      - RAG_TOP_K=5
+      - CHUNK_SIZE=800
+      - CHUNK_OVERLAP=100
+      - RAG_TEMPLATE=Use the following context as your learned knowledge, inside <context></context> XML tags.\n<context>\n[context]\n</context>\n\nWhen answer to user:\n- If you don't know, just say that you don't know.\n- If you are not sure, ask for clarification.\nAvoid mentioning that you obtained the information from the context.\nAnd answer according to the language of the user's question.
     volumes:
       - ./AI_Data/openwebui:/app/backend/data
     ports:

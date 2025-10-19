@@ -651,6 +651,7 @@ if [ -d searxng ]; then
   OPENWEBUI_PORT="8081" \
   SEARXNG_PORT="8082" \
   N8N_PORT="5678" \
+  MCP_QDRANT_PORT="8000" \
   POSTGRES_USER="n8n" \
   POSTGRES_DB="n8n" \
   LANGFUSE_PORT="3300" \

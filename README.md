@@ -1,6 +1,6 @@
-# 🚀 FlowTech-AI: Complete Developer Knowledge Stack
+# 🚀 FlowTech-AI: Production AI Stack for Developers
 
-> **All-in-one AI infrastructure** for developers: Code assistant (Cursor) + Conversational AI (OpenWebUI) + Personal Knowledge Management (Obsidian) + Intelligent Automation (n8n)
+> **Self-hosted AI infrastructure**: Cursor AI assistant + Conversational AI (OpenWebUI) + RAG + Intelligent Automation (n8n)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-compose-blue)](docker-compose.yml)
@@ -12,17 +12,16 @@
 
 A **production-ready, self-hosted AI stack** that combines:
 
-- 🤖 **AI Services**: n8n automation, OpenWebUI interface, Qdrant vector DB, Ollama LLM
+- 🤖 **AI Services**: OpenWebUI interface, Qdrant vector DB, n8n automation, Ollama LLM
 - 💻 **Cursor Integration**: MCP-Qdrant for AI-enhanced coding with context awareness
-- 📝 **Knowledge Management**: Automated Obsidian notes synchronization → RAG
-- 🔄 **Intelligent Workflows**: n8n automation for notes processing
+- 📚 **Knowledge Base**: RAG with document upload in OpenWebUI
+- 🔄 **Intelligent Workflows**: n8n automation platform
 - 🚀 **One-command deployment**: `./init.sh` and everything works
 
 ### ✨ Key Features
 
 ✅ **Cursor AI Enhancement** via Model Context Protocol (MCP)  
-✅ **OpenWebUI** with RAG over your personal notes  
-✅ **Obsidian Sync** with automatic indexing and embedding  
+✅ **OpenWebUI** with RAG for document Q&A  
 ✅ **Vector Search** with Qdrant (1024-dim embeddings)  
 ✅ **Production-ready** Docker Compose stack  
 ✅ **Automated Workflows** with n8n orchestration  
@@ -37,7 +36,7 @@ A **production-ready, self-hosted AI stack** that combines:
 git clone https://github.com/FlowTech-Lab/FlowTech-AI.git
 cd FlowTech-AI
 
-# 2. Initialize stack (optional: edit .env first)
+# 2. Initialize stack
 ./init.sh
 
 # ✅ Stack ready! Services available at:
@@ -58,254 +57,193 @@ cd FlowTech-AI
 | Service | Port | Description | Status |
 |---------|------|-------------|--------|
 | **OpenWebUI** | 8081 | AI chat interface with RAG | ✅ Production |
-| **MCP-Qdrant** | 8000 | Cursor IDE integration | ✅ Production |
+| **MCP-Qdrant** | 8000 | Cursor code context (read/write) | ✅ Production |
+| **MCP-Knowledge** | 8001 | Cursor access to OpenWebUI docs (read-only) | ✅ Production |
 | **n8n** | 5678 | Workflow automation | ✅ Production |
 | **Qdrant** | 6333 | Vector database | ✅ Production |
-| **PostgreSQL** | 5432 | Logs & metadata | ✅ Production |
+| **PostgreSQL** | 5432 | Metadata storage | ✅ Production |
 | **Redis** | 6379 | Cache & queues | ✅ Production |
 | **SearxNG** | 8082 | Web search engine | ✅ Production |
-
-### Python Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `services/notes-sync/sync-obsidian.py` | Sync Obsidian → Qdrant RAG |
-| `services/notes-sync/generate-indexes.py` | Auto-generate indexes (VMs, Servers) |
-
-### Workflows (n8n)
-
-| Workflow | Purpose | Status |
-|----------|---------|--------|
-| `obsidian-sync` | Notes sync automation | ⏳ To create in n8n |
+| **Langfuse** | 3300 | LLM observability | ✅ Production |
 
 ---
 
 ## 💻 Cursor Integration
 
+FlowTech-AI provides **two MCP servers** for Cursor:
+
+1. **`qdrant`** (port 8000) - Your **code context** (read/write)
+   - Store code snippets with `@qdrant store`
+   - Retrieve context with `@qdrant find`
+   - Personal knowledge base
+
+2. **`qdrant-knowledge`** (port 8001) - **OpenWebUI documents** (read-only)
+   - Access documents uploaded to OpenWebUI
+   - Search through shared team knowledge
+   - Read-only to prevent accidental changes
+
 ### Setup (2 minutes)
 
 ```bash
-# 1. Copy MCP config
-cp config/mcp-config.json ~/.cursor/mcp.json
+# 1. Copy MCP config template
+cp cursor-mcp-config.json ~/.cursor/mcp.json
 
 # 2. Edit IP (change to your server IP)
 nano ~/.cursor/mcp.json
+# Replace 192.168.0.246 with your actual IP
 
 # 3. Restart Cursor
 
-# 4. Test
+# 4. Test both servers
 @qdrant store "FlowTech-AI is awesome!"
 @qdrant find awesome
+
+@qdrant-knowledge find documentation
 ```
 
-**Full guide**: `docs/setup/02-cursor-setup.md`
+**What you get:**
+- Store code snippets, notes, and context
+- Retrieve information semantically during coding
+- Access OpenWebUI shared documents
+- AI-enhanced development with persistent memory
 
 ---
 
-## 📝 Obsidian Integration
+## 📚 OpenWebUI RAG
 
-### Setup Knowledge Management
+### Upload Documents
 
-```bash
-# 1. Point Obsidian vault to Notes/
-# 2. Use templates from Notes/_Templates/
-# 3. Enable sync (optional: via Nextcloud)
+1. Open http://localhost:8081
+2. Create a new chat
+3. Click **"Knowledge"** button
+4. Upload your documents (PDF, MD, TXT, DOCX, etc.)
+5. Ask questions about your documents!
 
-# 4. Auto-sync to RAG
-python3 services/notes-sync/sync-obsidian.py
-
-# Or via n8n (every 10 min)
+**Example:**
+```
+User: What does the API documentation say about authentication?
+AI: Based on the uploaded API docs, authentication uses JWT tokens...
 ```
 
-**Features**:
-- ✅ Auto-generated indexes (VMs, Servers, Domains)
-- ✅ Semantic search in OpenWebUI
-- ✅ Change detection (MD5 hash)
-- ✅ Smart chunking by sections `##`
-
-**Full guide**: `docs/setup/03-obsidian-setup.md`
+### Supported Formats
+- 📄 PDF, DOCX, TXT, MD
+- 💻 Code files (PY, JS, TS, etc.)
+- 🌐 Websites (via URL)
 
 ---
 
-## 🏗️ Architecture
+## 🔧 Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                     🖥️  YOUR MACHINE                          │
-│  ├─ Cursor IDE (with MCP-Qdrant)                             │
-│  └─ Obsidian (optional, for notes)                           │
-└────────────────────────┬─────────────────────────────────────┘
-                         │
-                         ↓ MCP / Sync
-┌──────────────────────────────────────────────────────────────┐
-│                   🐳 FLOWTECH-AI STACK                        │
-├──────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
-│  │ MCP-Qdrant │  │  OpenWebUI │  │    n8n     │            │
-│  │  :8000     │  │   :8081    │  │   :5678    │            │
-│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘            │
-│        │                │                │                    │
-│        └────────────────┴────────────────┘                   │
-│                         │                                     │
-│                    ┌────▼────┐                               │
-│                    │ Qdrant  │                               │
-│                    │  :6333  │                               │
-│                    └────┬────┘                               │
-│                         │                                     │
-│         ┌───────────────┼───────────────┐                   │
-│         │               │               │                    │
-│    ┌────▼────┐    ┌────▼────┐    ┌────▼────┐              │
-│    │PostgreSQL│    │  Redis  │    │ Ollama  │              │
-│    │  :5432   │    │  :6379  │    │ (ext)   │              │
-│    └──────────┘    └──────────┘    └──────────┘              │
-│                                                               │
-│  Collections:                                                 │
-│  ├─ cursor-context    → Cursor MCP (code snippets)          │
-│  └─ notes-flowtech    → Obsidian notes (RAG)                │
-│                                                               │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                   FlowTech-AI Stack                     │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────┐ │
+│  │  Cursor IDE  │───▶│ MCP-Qdrant   │───▶│  Qdrant  │ │
+│  │  (Dev Tool)  │    │  (Port 8000) │    │  Vector  │ │
+│  └──────────────┘    └──────────────┘    │    DB    │ │
+│                                           └────┬─────┘ │
+│  ┌──────────────┐    ┌──────────────┐         │       │
+│  │   Browser    │───▶│  OpenWebUI   │────────▶│       │
+│  │              │    │  (Port 8081) │         │       │
+│  └──────────────┘    └──────────────┘         │       │
+│                                                │       │
+│  ┌──────────────┐    ┌──────────────┐         │       │
+│  │   n8n Web    │───▶│     n8n      │────────▶│       │
+│  │  Interface   │    │  (Port 5678) │         │       │
+│  └──────────────┘    └──────────────┘         │       │
+│                                                │       │
+│  ┌────────────────────────────────────────────┘       │
+│  │                                                     │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  └─▶│  Redis   │  │ Postgres │  │ SearxNG  │        │
+│     └──────────┘  └──────────┘  └──────────┘        │
+│                                                       │
+└───────────────────────────────────────────────────────┘
 ```
 
----
-
-## 📚 Documentation
-
-| Guide | Description |
-|-------|-------------|
-| [QUICKSTART.md](QUICKSTART.md) | ⚡ Start in 5 minutes |
-| [MIGRATION-V2-PLAN.md](MIGRATION-V2-PLAN.md) | 🔄 V2 migration plan |
-| [docs/setup/](docs/setup/) | 📖 Complete installation |
-| [docs/architecture/](docs/architecture/) | 🏗️ Technical architecture |
-| [docs/services/](docs/services/) | 🔧 Service documentation |
-| [Notes/README-NOTES.md](Notes/README-NOTES.md) | 📝 Notes management guide |
+**Data Flow:**
+1. **Cursor**: Store/retrieve code context via MCP → Qdrant
+2. **OpenWebUI**: Upload docs → RAG → Qdrant → AI answers
+3. **n8n**: Automate workflows, integrate external APIs
 
 ---
 
 ## 🛠️ Advanced Usage
 
-### Manual sync notes to RAG
+### Custom Workflows (n8n)
 
+1. Open http://localhost:5678
+2. Login with credentials from `.env` file
+3. Import workflow from `SRC/FlowTech-AI-Complete-Workflow.json`
+4. Customize for your needs
+
+### Embedding Models
+
+**Default**: `bge-m3:567m` (Ollama) - Multilingual, 1024 dimensions
+
+**Change model**:
 ```bash
-cd services/notes-sync
-python sync-obsidian.py
+# Edit .env
+RAG_EMBEDDING_MODEL=bge-large:latest  # or another model
+
+# Restart
+docker compose restart openwebui
 ```
 
-### Generate indexes
+### Extend with Obsidian
 
-```bash
-python generate-indexes.py
-# Creates VMs-Index.md, Servers-Index.md, etc.
-```
+Want to sync personal notes? Check the **Notes Templates** in `Notes/_Templates/`:
+- `vm-template.md` - For virtual machines
+- `server-template.md` - For servers
+- `domain-template.md` - For domains
 
-### Monitor Qdrant collections
-
-```bash
-# cursor-context (Cursor MCP)
-curl http://localhost:6333/collections/cursor-context
-
-# notes-flowtech (Obsidian RAG)
-curl http://localhost:6333/collections/notes-flowtech
-```
-
-### View logs
-
-```bash
-docker compose logs -f mcp-qdrant
-docker compose logs -f n8n
-```
+**For automated sync**, see companion repo: [Flow-Notes-AI](https://github.com/FlowTech-Lab/Flow-Notes-AI)
 
 ---
 
-## 💡 Use Cases
+## 📖 Documentation
 
-### 1. AI-Enhanced Development (Cursor)
-
-```
-- Code in Cursor with AI assistance
-- @qdrant store to save useful snippets
-- @qdrant find to retrieve context
-- RAG enriched with your technical notes
-```
-
-### 2. Personal Knowledge Base (Obsidian + OpenWebUI)
-
-```
-- Manage notes in Obsidian (VMs, servers, projects)
-- Auto-sync to Qdrant every 10 min
-- Ask questions in OpenWebUI
-- Get answers from your own notes
-```
-
-### 3. Team Knowledge Sharing (Fork)
-
-```
-- Clone repo
-- Team members contribute notes
-- Shared knowledge base via RAG
-- Everyone benefits from collective knowledge
-```
-
----
-
-## 📊 Requirements
-
-### Minimum (Dev/Test)
-
-- CPU: 4 cores
-- RAM: 8GB
-- Disk: 50GB
-- OS: Linux (Ubuntu 20.04+)
-
-### Recommended (Production)
-
-- CPU: 8+ cores
-- RAM: 32GB (64GB recommended)
-- Disk: 100GB NVMe
-- OS: Linux (Ubuntu 22.04+)
-- Network: 1Gbps
-
-### External Dependencies (optional)
-
-- **Ollama**: External LLM server (if not using cloud APIs)
-- **Nextcloud**: For multi-device note sync
+- **[QUICKSTART.md](QUICKSTART.md)** - Complete setup guide
+- **[Notes/_Templates/](Notes/_Templates/)** - Obsidian note templates
+- **[docs/](docs/)** - Architecture & advanced topics
 
 ---
 
 ## 🤝 Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
+Contributions are welcome! Please:
+
+1. Fork the repo
+2. Create a feature branch
+3. Test your changes with `./init.sh`
+4. Submit a pull request
 
 ---
 
-## 📜 License
+## 📄 License
 
-MIT License - See [LICENSE](LICENSE)
+MIT License - See [LICENSE](LICENSE) for details
+
+---
+
+## 🙏 Acknowledgments
+
+- **OpenWebUI** - Amazing AI interface
+- **Cursor** - Best AI-powered IDE
+- **n8n** - Powerful automation platform
+- **Qdrant** - High-performance vector database
+- **Ollama** - Local LLM inference
 
 ---
 
 ## 🔗 Links
 
+- **GitHub**: https://github.com/FlowTech-Lab/FlowTech-AI
 - **Documentation**: [docs/](docs/)
-- **Quick Start**: [QUICKSTART.md](QUICKSTART.md)
-- **Architecture**: [docs/architecture/](docs/architecture/)
-- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+- **Issues**: https://github.com/FlowTech-Lab/FlowTech-AI/issues
 
 ---
 
-## 🆘 Support
-
-- **Issues**: GitHub Issues
-- **Discussions**: GitHub Discussions
-- **Documentation**: [docs/](docs/)
-
----
-
-**Version**: 2.0.0  
-**Status**: 🟢 Production Ready  
-**Last Updated**: 2025-10-18
-
----
-
-## ⭐ Star this repo if you find it useful!
-
+**Made with ❤️ by the FlowTech-Lab community**
