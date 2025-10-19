@@ -36,8 +36,8 @@ A **production-ready, self-hosted AI stack** that combines:
 git clone https://github.com/FlowTech-Lab/FlowTech-AI.git
 cd FlowTech-AI
 
-# 2. Initialize stack
-./init.sh
+# 2. Initialize stack (requires sudo for permissions)
+sudo ./init.sh
 
 # ✅ Stack ready! Services available at:
 # - OpenWebUI: http://localhost:8081

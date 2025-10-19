@@ -13,15 +13,15 @@ cd FlowTech-AI
 cp .env.example .env
 nano .env  # Adjust if necessary
 
-# 3. Launch everything!
-./init.sh
+# 3. Launch everything! (requires sudo for permissions)
+sudo ./init.sh
 
 # ✅ That's it! Stack ready in 5 minutes
 ```
 
 ## 🎯 Available services
 
-After `./init.sh`, you have access to:
+After `sudo ./init.sh`, you have access to:
 
 | Service | URL | Description |
 |---------|-----|-------------|
@@ -30,7 +30,7 @@ After `./init.sh`, you have access to:
 | **n8n** | http://localhost:5678 | Automation workflows |
 | **Qdrant** | http://localhost:6333 | Vector database |
 
-**Credentials**: Displayed at the end of `init.sh`
+**Credentials**: Displayed at the end of `sudo ./init.sh`
 
 ## 🔧 Cursor Configuration
 
@@ -125,7 +125,7 @@ AI: Based on the uploaded documentation, the database setup involves...
 
 ```
 1. Clone the repo
-2. ./init.sh
+2. sudo ./init.sh
 3. Configure Cursor
 4. Everyone shares the same knowledge base
 ```
@@ -163,7 +163,7 @@ docker compose logs
 
 # Restart cleanly
 docker compose down
-./init.sh
+sudo ./init.sh
 ```
 
 ### Cursor not connecting

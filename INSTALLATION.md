@@ -47,7 +47,8 @@ cd FlowTech-AI
 ### Step 2: Run Installation Script
 
 ```bash
-./init.sh
+# Requires sudo for setting proper file permissions
+sudo ./init.sh
 ```
 
 **⚠️ Important**: The script will ask you **2 questions**:
@@ -358,7 +359,7 @@ docker compose logs
 **Solution**:
 ```bash
 docker compose down
-./init.sh
+sudo ./init.sh
 ```
 
 ### Problem: Can't access services from other computers

@@ -192,7 +192,7 @@ FlowTech-AI/
 ```bash
 git clone https://github.com/FlowTech-Lab/FlowTech-AI.git
 cd FlowTech-AI
-./init.sh
+sudo ./init.sh
 ```
 
 **That's it!** All services start automatically with health checks.
