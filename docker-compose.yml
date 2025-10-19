@@ -127,8 +127,8 @@ services:
       - "${MCP_QDRANT_PORT:-8000}:8000"
     environment:
       - QDRANT_URL=http://qdrant:6333
-      - COLLECTION_NAME=${MCP_QDRANT_COLLECTION:-cursor-context}
-      - EMBEDDING_MODEL=BAAI/bge-m3
+      - COLLECTION_NAME=${MCP_QDRANT_COLLECTION:-open-webui_files}
+      - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
       - EMBEDDING_PROVIDER=fastembed
       - FASTMCP_PORT=8000
       - FASTMCP_HOST=0.0.0.0
@@ -337,7 +337,7 @@ services:
       - QDRANT_URI=http://qdrant:6333
       - RAG_VECTOR_DB=qdrant
       # Configuration RAG
-      - RAG_EMBEDDING_MODEL=BAAI/bge-m3
+      - RAG_EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
       - RAG_TOP_K=3
       - CHUNK_SIZE=1000
       - CHUNK_OVERLAP=100
