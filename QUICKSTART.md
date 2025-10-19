@@ -70,11 +70,29 @@ Dans Cursor :
 
 ## 📝 Configuration Obsidian (optionnel)
 
-### 1. Structure des notes
+### 1. Accès aux notes
 
-Créez un vault Obsidian pointant vers :
-- **Local** : `FlowTech-AI/Notes/`
-- **Nextcloud** : Sync avec `/Flow-Notes-AI/Notes/`
+**Option A - Partage réseau Samba** (RECOMMANDÉ pour LAN) :
+```bash
+# Activer Samba
+docker compose up -d samba
+
+# Windows : Ouvrir \\SERVER_IP\notes dans Explorateur
+# Linux : sudo mount -t cifs //SERVER_IP/notes /mnt/notes
+# macOS : Finder → Connect to Server → smb://SERVER_IP/notes
+
+# Obsidian : Ouvrir le dossier réseau comme vault
+```
+✅ Temps réel, pas de sync  
+✅ Multi-utilisateurs
+
+**Option B - Local** :
+- Vault local : `FlowTech-AI/Notes/`
+
+**Option C - Nextcloud** :
+- Sync avec `/Flow-Notes-AI/Notes/`
+
+Voir [docs/SAMBA-SHARE-GUIDE.md](docs/SAMBA-SHARE-GUIDE.md) pour configuration détaillée
 
 ### 2. Templates
 

@@ -128,9 +128,8 @@ services:
     environment:
       - QDRANT_URL=http://qdrant:6333
       - COLLECTION_NAME=${MCP_QDRANT_COLLECTION:-cursor-context}
-      - EMBEDDING_MODEL=${FASTEMBED_MODEL:-BAAI/bge-large-en-v1.5}
+      - EMBEDDING_MODEL=BAAI/bge-m3
       - EMBEDDING_PROVIDER=fastembed
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
       - FASTMCP_PORT=8000
       - FASTMCP_HOST=0.0.0.0
     volumes:
@@ -332,11 +331,17 @@ services:
       - flow-ai-network
     environment:
       # Base LLM (Ollama par défaut)
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://192.168.0.2:11434}
       # Activation de la mémoire vectorielle
       - VECTOR_DB=qdrant
       - QDRANT_URI=http://qdrant:6333
       - RAG_VECTOR_DB=qdrant
+      # Configuration RAG
+      - RAG_EMBEDDING_MODEL=BAAI/bge-m3
+      - RAG_TOP_K=3
+      - CHUNK_SIZE=1000
+      - CHUNK_OVERLAP=100
+      - ENABLE_QDRANT_MULTITENANCY_MODE=true
     volumes:
       - ./AI_Data/openwebui:/app/backend/data
     ports:

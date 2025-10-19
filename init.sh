@@ -49,6 +49,10 @@ readonly RED="\033[31m"
 readonly TOTAL_STEPS=11
 readonly AI_DATA_DIR="./AI_Data"
 
+# Default mode flags
+FORCE_NON_INTERACTIVE="${FORCE_NON_INTERACTIVE:-false}"
+DEV_MODE="${DEV_MODE:-false}"
+
 # =============================================================================
 # Help and options
 # =============================================================================
@@ -201,9 +205,22 @@ configure_clickhouse() {
 
 # Docker images download
 pull_docker_images() {
+  # Check if mcp-qdrant needs to be built locally
+  log_info "Checking for services requiring local build..."
+  
+  if docker compose config | grep -q "build:"; then
+    log_info "Building custom images (mcp-qdrant)..."
+    if docker compose build mcp-qdrant; then
+      log_ok "Custom images built successfully"
+    else
+      log_warn "Build failed, will try to pull"
+    fi
+  fi
+  
   log_info "Downloading Docker images (timeout: ${DOCKER_PULL_TIMEOUT}s)..."
   
-  if run_with_timeout "$DOCKER_PULL_TIMEOUT" "docker compose pull"; then
+  # Pull images (ignore errors for custom-built images)
+  if run_with_timeout "$DOCKER_PULL_TIMEOUT" "docker compose pull --ignore-pull-failures"; then
     log_ok "Docker images downloaded successfully"
     return 0
   else
@@ -446,11 +463,22 @@ show_final_summary() {
   echo "  🗄️  Qdrant (Base vectorielle):    http://localhost:6333"
   echo "  🔌 MCP-Qdrant (Cursor):          http://localhost:$(get_env_value MCP_QDRANT_PORT)"
   echo "  📊 ClickHouse (Analytics):       http://localhost:8123"
+  
+  # Afficher Samba si configuré
+  if [ -n "$(get_env_value SAMBA_PASSWORD)" ]; then
+    echo "  📁 Samba Share (Notes):          \\\\SERVER_IP\\notes (SMB)"
+  fi
   echo
   log_info "🔑 Default Credentials:"
   echo "  • Langfuse: $(get_env_value LANGFUSE_INIT_USER_EMAIL) / $(get_env_value LANGFUSE_INIT_USER_PASSWORD)"
   echo "  • N8N: $(get_env_value N8N_BASIC_AUTH_USER) / $(get_env_value N8N_BASIC_AUTH_PASSWORD)"
   echo "  • N8N Bearer Token: $(get_env_value N8N_SECURITY_API_BEARER_AUTH)"
+  
+  # Afficher credentials Samba si configuré
+  if [ -n "$(get_env_value SAMBA_PASSWORD)" ]; then
+    echo "  • Samba Share: $(get_env_value SAMBA_USER) / $(get_env_value SAMBA_PASSWORD)"
+    echo "    → Access: \\\\SERVER_IP\\notes (Windows) or smb://SERVER_IP/notes (Mac/Linux)"
+  fi
   echo
   log_info "📁 Important Files:"
   echo "  • Configuration: .env"
@@ -610,7 +638,7 @@ mkdir -p searxng
 if [ -d searxng ]; then
     mkdir -p "${AI_DATA_DIR}/searxng"
     cp -a searxng/. "${AI_DATA_DIR}/searxng/"
-    chown -R "$uid:$gid" "${AI_DATA_DIR}/searxng" 2>/dev/null || true
+    sudo chown -R "$uid:$gid" "${AI_DATA_DIR}/searxng" 2>/dev/null || chown -R "$uid:$gid" "${AI_DATA_DIR}/searxng" 2>/dev/null || true
     set_secure_permissions "${AI_DATA_DIR}/searxng" 755 644
   fi
   
@@ -641,6 +669,18 @@ if [ -d searxng ]; then
   
   set_env_value LANGFUSE_HOST "http://langfuse:3000" enforce
   log_ok "Variables d'environnement de base configurées"
+  
+  # Configuration Samba Share (optionnel - partage réseau Notes)
+  if [ -z "$(get_env_value SAMBA_PASSWORD)" ]; then
+    local samba_password
+    samba_password=$(openssl rand -base64 24)
+    set_env_value SAMBA_USER "admin" enforce
+    set_env_value SAMBA_PASSWORD "$samba_password" enforce
+    set_env_value SAMBA_UID "1000" enforce
+    set_env_value SAMBA_GID "1000" enforce
+    set_env_value SAMBA_PORT "445" enforce
+    log_info "Samba Share credentials générés (pour accès réseau aux notes)"
+  fi
   
   # Étape 5: Configuration des secrets Langfuse
   next_step "Configuration des identifiants Langfuse"
@@ -847,7 +887,15 @@ if [ -d searxng ]; then
   
   # Démarrage de tous les services (ordre géré par depends_on dans docker-compose.yml)
   next_step "Démarrage de tous les services (ordre optimisé)"
-  run_with_timeout "$SERVICE_START_TIMEOUT" "docker compose up -d"
+  
+  # Inclure profil samba si configuré
+  local compose_cmd="docker compose"
+  if [ -n "$(get_env_value SAMBA_PASSWORD)" ]; then
+    compose_cmd="docker compose --profile samba"
+    log_info "Samba Share activé"
+  fi
+  
+  run_with_timeout "$SERVICE_START_TIMEOUT" "$compose_cmd up -d"
   
   # Attendre que tous les services soient prêts
   log_info "Attente de la stabilisation des services (60s)..."

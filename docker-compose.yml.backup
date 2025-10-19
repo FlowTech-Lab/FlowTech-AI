@@ -109,6 +109,41 @@ services:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
 
+  # 5.1. MCP-Qdrant - Model Context Protocol Server for Cursor
+  # Uses BAAI/bge-large-en-v1.5 (1024 dims, 1.2GB) via FastEmbed (Production-ready)
+  mcp-qdrant:
+    build:
+      context: ./mcp-qdrant
+      dockerfile: Dockerfile
+    image: flowtech/mcp-qdrant:latest
+    container_name: mcp-qdrant
+    restart: unless-stopped
+    networks:
+      - flow-ai-network
+    depends_on:
+      qdrant:
+        condition: service_started
+    ports:
+      - "${MCP_QDRANT_PORT:-8000}:8000"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - COLLECTION_NAME=${MCP_QDRANT_COLLECTION:-cursor-context}
+      - EMBEDDING_MODEL=${FASTEMBED_MODEL:-BAAI/bge-large-en-v1.5}
+      - EMBEDDING_PROVIDER=fastembed
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
+      - FASTMCP_PORT=8000
+      - FASTMCP_HOST=0.0.0.0
+    volumes:
+      - ./AI_Data/mcp-qdrant:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
   # 6. Langfuse-worker - Migrations et traitement
   langfuse-worker:
     image: docker.io/langfuse/langfuse-worker:3

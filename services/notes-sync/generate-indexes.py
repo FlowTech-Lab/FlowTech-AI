@@ -6,6 +6,7 @@ Génère automatiquement les index (VMs, Servers, Domains) depuis les frontmatte
 
 import os
 import re
+import sys
 import yaml
 from datetime import datetime
 from pathlib import Path

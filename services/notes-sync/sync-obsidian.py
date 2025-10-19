@@ -33,15 +33,15 @@ class Config:
     
     # Qdrant
     QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-    COLLECTION_NAME = os.getenv("NOTES_COLLECTION", "notes-flowtech")
+    COLLECTION_NAME = os.getenv("NOTES_COLLECTION", "open-webui_knowledge")
     
     # Embedding
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-large-en-v1.5")
-    VECTOR_SIZE = 1024  # bge-large-en-v1.5
+    VECTOR_SIZE = 1024  # BAAI/bge-large-en-v1.5
     
     # Chemins (peut être monté en volume Docker)
     NOTES_PATH = Path(os.getenv("NOTES_PATH", "/app/notes"))
-    CACHE_PATH = Path(os.getenv("CACHE_PATH", "/app/data/cache"))
+    CACHE_PATH = Path(os.getenv("CACHE_PATH", os.path.expanduser("~/.cache/flowtech-ai")))
     
     # Chunking
     MAX_CHUNK_SIZE = 512  # tokens
@@ -134,11 +134,14 @@ def chunk_by_sections(content: str, metadata: Dict, file_path: str) -> List[Dict
 
 def create_stable_id(file_path: str, chunk_index: int) -> str:
     """
-    Crée un ID stable pour un chunk basé sur le path + index
+    Crée un ID stable UUID pour un chunk basé sur le path + index
     Permet de remplacer les chunks lors des updates
     """
+    import uuid
     content = f"{file_path}::{chunk_index}"
-    return hashlib.sha256(content.encode()).hexdigest()
+    # Créer UUID v5 (déterministe basé sur namespace + nom)
+    namespace = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')  # DNS namespace
+    return str(uuid.uuid5(namespace, content))
 
 
 # ========================================
@@ -163,7 +166,7 @@ class QdrantManager:
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config={
-                    f"fast-{Config.EMBEDDING_MODEL.replace('/', '-')}": VectorParams(
+                    "": VectorParams(
                         size=Config.VECTOR_SIZE,
                         distance=Distance.COSINE
                     )
@@ -215,7 +218,7 @@ class QdrantManager:
         
         # Création des points
         points = []
-        vector_name = f"fast-{Config.EMBEDDING_MODEL.replace('/', '-')}"
+        vector_name = ""  # Vecteur par défaut
         
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
             point_id = create_stable_id(file_path, chunk["metadata"]["chunk_index"])
