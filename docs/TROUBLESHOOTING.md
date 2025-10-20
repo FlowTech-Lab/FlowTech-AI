@@ -285,7 +285,7 @@ docker compose exec postgres psql -U n8n -d n8n -c "SELECT * FROM pg_stat_activi
 ```bash
 # WARNING: This will delete all data
 # Edit init.sh: set DEV_MODE=true
-./init.sh
+sudo ./init.sh
 ```
 
 ### Service Recovery

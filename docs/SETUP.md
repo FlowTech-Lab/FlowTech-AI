@@ -28,7 +28,7 @@ cd FlowTech-AI
 ### 2. Run Initialization
 ```bash
 chmod +x init.sh
-./init.sh
+sudo ./init.sh
 ```
 
 The `init.sh` script will:
@@ -153,7 +153,7 @@ docker compose restart [service-name]
 
 # Complete reset (WARNING: deletes all data)
 # Edit init.sh: set DEV_MODE=true
-./init.sh
+sudo ./init.sh
 ```
 
 #### Port Conflicts

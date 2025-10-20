@@ -109,16 +109,16 @@
     },
     {
       "parameters": {
-        "model": "bge-m3:567m"
+        "model": "BAAI/bge-m3"
       },
-      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsHuggingFaceInference",
       "typeVersion": 1,
       "position": [
         -1152,
         960
       ],
       "id": "83d8f45e-b3f6-4418-b7d8-f80e004f1189",
-      "name": "Ollama Embeddings"
+      "name": "HuggingFace Embeddings"
     },
     {
       "parameters": {},

@@ -2,7 +2,7 @@
 
 Service MCP (Model Context Protocol) optimisé pour Cursor IDE avec Qdrant vector database.
 
-## Caractéristiques
+## Features
 
 - **Image multi-stage** : Build optimisé sans overhead de compilation
 - **Non-root user** : Sécurité renforcée
@@ -10,9 +10,9 @@ Service MCP (Model Context Protocol) optimisé pour Cursor IDE avec Qdrant vecto
 - **Ressources configurables** : 2 CPU / 4GB RAM (limites), 0.5 CPU / 512MB (réservation)
 - **Persistance** : Volume dédié pour les données
 
-## Modèles d'embeddings supportés
+## Supported embedding models
 
-### FastEmbed (par défaut)
+### FastEmbed (default)
 - `BAAI/bge-m3` (recommandé) - 1024 dimensions, ~2.2GB, **multilingue 100+ langues**
   - ✅ Dense + Lexical + Multi-vector retrieval
   - ✅ Parfait pour FR + multilangue
@@ -32,10 +32,10 @@ MCP_QDRANT_COLLECTION=cursor-context-m3
 # Port d'exposition
 MCP_QDRANT_PORT=8000
 
-# Modèle FastEmbed (bge-m3 = multilingue 1024 dims)
+# FastEmbed model (bge-m3 = multilingual 1024 dims)
 FASTEMBED_MODEL=BAAI/bge-m3
 
-# Ollama (pour référence future si support ajouté)
+# Ollama (for future reference if support added)
 OLLAMA_BASE_URL=http://192.168.0.2:11434
 ```
 
@@ -48,22 +48,22 @@ OLLAMA_BASE_URL=http://192.168.0.2:11434
 
 **Action requise**: Créez une **nouvelle collection** `cursor-context-m3` et ré-indexez vos documents.
 
-## Build et déploiement
+## Build and deployment
 
-### 1. Build de l'image
+### 1. Build the image
 
 ```bash
 cd /home/flowtech/FlowTech-LAB/FlowTech-AI
 docker compose build mcp-qdrant
 ```
 
-### 2. Démarrage du service
+### 2. Start the service
 
 ```bash
 docker compose up -d mcp-qdrant
 ```
 
-### 3. Vérification
+### 3. Verification
 
 ```bash
 # Logs
