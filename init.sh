@@ -47,7 +47,7 @@ readonly BLUE="\033[36m"
 readonly RED="\033[31m"
 
 readonly TOTAL_STEPS=11
-readonly AI_DATA_DIR="./AI_Data"
+readonly AI_DATA_DIR="./.AI_Data"
 
 # Default mode flags
 FORCE_NON_INTERACTIVE="${FORCE_NON_INTERACTIVE:-false}"
@@ -241,9 +241,9 @@ handle_exit() {
   echo "[INFO ] Log complet: $LOGFILE"
   
   if [ $exit_code -eq 0 ]; then
-    log_ok "Initialisation FlowTech-AI terminée avec succès"
+    log_ok "FlowTech-AI initialization completed successfully"
   else
-    log_error "Initialisation échouée (code: $exit_code)"
+    log_error "Initialization failed (code: $exit_code)"
   fi
   
   exit $exit_code
@@ -253,10 +253,10 @@ handle_exit() {
 check_dependency() {
   local cmd="$1"
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    log_error "Dépendance manquante: $cmd"
+    log_error "Missing dependency: $cmd"
     exit 1
   fi
-  log_ok "$cmd disponible"
+  log_ok "$cmd available"
 }
 
 # Optimized environment variables management
@@ -282,7 +282,7 @@ set_env_value() {
   esac
 }
 
-# Configuration en lot des variables d'environnement
+# Bulk environment variables configuration
 bulk_set_env() {
   local mode="$1"
   shift
@@ -303,11 +303,11 @@ wait_for_http() {
   local interval="${3:-2}"
   local elapsed=0
   
-  log_info "Attente de la disponibilité de $url (timeout: ${timeout}s)"
+  log_info "Waiting for $url availability (timeout: ${timeout}s)"
   
   while [ $elapsed -lt $timeout ]; do
     if curl -fsS -m 3 "$url" >/dev/null 2>&1; then
-      log_ok "Service disponible: $url"
+      log_ok "Service available: $url"
       return 0
     fi
     
@@ -333,14 +333,14 @@ run_with_timeout() {
   shift
   local cmd="$*"
   
-  log_info "Exécution (timeout ${timeout}s): $cmd"
+  log_info "Executing (timeout ${timeout}s): $cmd"
   
   if timeout "$timeout" bash -lc "$cmd"; then
-    log_ok "Commande réussie: $cmd"
+    log_ok "Command succeeded: $cmd"
     return 0
   else
     local rc=$?
-    log_warn "Commande échouée/timeout (rc=$rc): $cmd"
+    log_warn "Command failed/timeout (rc=$rc): $cmd"
     return $rc
   fi
 }
@@ -357,12 +357,12 @@ check_disk_space() {
   available_space=$(df -Pk . | tail -1 | awk '{print $4}')
   
   if [ "${available_space:-0}" -lt $MIN_FREE_SPACE_KB ]; then
-    log_warn "Espace disque insuffisant: ${available_space}KB disponibles"
-    log_warn "Recommandé: au moins 5GB (2GB minimum)"
+    log_warn "Insufficient disk space: ${available_space}KB available"
+    log_warn "Recommended: at least 5GB (2GB minimum)"
     return 1
   fi
   
-  log_ok "Espace disque suffisant: ${available_space}KB disponibles"
+  log_ok "Sufficient disk space: ${available_space}KB available"
   return 0
 }
 
@@ -375,32 +375,32 @@ set_secure_permissions() {
   if [ -d "$dir" ]; then
     find "$dir" -type d -exec chmod "$dir_mode" {} + 2>/dev/null || true
     find "$dir" -type f -exec chmod "$file_mode" {} + 2>/dev/null || true
-    log_ok "Permissions sécurisées appliquées à $dir"
+    log_ok "Secure permissions applied to $dir"
   fi
 }
 
 # Required files check and creation
 ensure_required_files() {
-  log_info "Vérification des fichiers requis"
+  log_info "Checking required files"
   
   # System prerequisites check
-  log_info "Vérification des prérequis système"
+  log_info "Checking system prerequisites"
   
-  log_ok "Fichiers requis présents et exécutables"
+  log_ok "Required files present and executable"
 }
 
 
 # docker-compose.yml correction to remove problematic volumes
 fix_docker_compose() {
-  log_info "Correction du fichier docker-compose.yml"
+  log_info "Fixing docker-compose.yml file"
   
-  # Sauvegarder le fichier original
+  # Backup original file
   cp docker-compose.yml docker-compose.yml.backup 2>/dev/null || true
   
   # Optimized docker-compose.yml configuration
-  log_info "Configuration docker-compose.yml optimisée"
+  log_info "Optimized docker-compose.yml configuration"
   
-  log_ok "Fichier docker-compose.yml configuré"
+  log_ok "docker-compose.yml configured"
 }
 
 
@@ -520,15 +520,15 @@ configure_qdrant_collections() {
 
 # Final summary display
 show_final_summary() {
-  log_ok "🎉 FlowTech-AI est maintenant opérationnel !"
+  log_ok "🎉 FlowTech-AI is now operational!"
   echo
-  log_info "📋 Résumé des services disponibles :"
+  log_info "📋 Available services summary:"
   echo
   echo "  🌐 Langfuse (Monitoring AI):     http://localhost:$(get_env_value LANGFUSE_PORT)"
   echo "  🤖 OpenWebUI (Interface AI):     http://localhost:$(get_env_value OPENWEBUI_PORT)"
-  echo "  🔍 SearxNG (Moteur de recherche): http://localhost:$(get_env_value SEARXNG_PORT)"
-  echo "  ⚡ N8N (Automatisation):         http://localhost:$(get_env_value N8N_PORT)"
-  echo "  🗄️  Qdrant (Base vectorielle):    http://localhost:6333"
+  echo "  🔍 SearxNG (Search Engine):      http://localhost:$(get_env_value SEARXNG_PORT)"
+  echo "  ⚡ N8N (Automation):             http://localhost:$(get_env_value N8N_PORT)"
+  echo "  🗄️  Qdrant (Vector Database):    http://localhost:6333"
   echo "  🔌 MCP-Qdrant (Cursor):          http://localhost:$(get_env_value MCP_QDRANT_PORT)"
   echo "  📊 ClickHouse (Analytics):       http://localhost:8123"
   
@@ -559,6 +559,19 @@ show_final_summary() {
   echo "  • Stop all: docker compose down"
   echo "  • View status: docker compose ps"
   echo
+  
+  # Display Notes sync status
+  if [ -x "./scripts/sync-notes.sh" ] && [ -d "./scripts/venv" ]; then
+    log_info "📝 Notes Sync to Qdrant:"
+    if crontab -l 2>/dev/null | grep -q "sync-notes.sh"; then
+      echo "  • Status: ✅ Enabled (automatic hourly sync)"
+      echo "  • Manual sync: ./scripts/sync-notes.sh"
+    else
+      echo "  • Status: ⚠️  Configured (manual only)"
+      echo "  • Enable auto-sync: ./scripts/install-cron.sh"
+    fi
+    echo
+  fi
 }
 
 # Display development options
@@ -598,13 +611,13 @@ main() {
   check_dependency "docker"
   
   if ! docker compose version >/dev/null 2>&1; then
-    log_error "Plugin docker compose requis"
+    log_error "Docker compose plugin required"
     exit 1
   fi
-  log_ok "Plugin docker compose détecté"
+  log_ok "Docker compose plugin detected"
   
   # Step 1.5: Disk space check
-  next_step "Vérification de l'espace disque"
+  next_step "Checking disk space"
   if ! check_disk_space; then
     exit 1
   fi
@@ -612,33 +625,33 @@ main() {
   # Required files check
   ensure_required_files
   
-  # Correction du docker-compose.yml
+  # Fix docker-compose.yml
   fix_docker_compose
   
-  # Configuration des permissions
+  # Permissions configuration
 umask 077
-  log_info "Création du fichier .env"
+  log_info "Creating .env file"
   touch "$ENV_FILE"
   
   # Docker permissions check
   if ! docker info >/dev/null 2>&1; then
-    log_error "Permissions Docker insuffisantes"
-    log_info "Ajoutez votre utilisateur au groupe docker:"
+    log_error "Insufficient Docker permissions"
+    log_info "Add your user to docker group:"
     log_info "sudo usermod -aG docker $USER && newgrp docker"
     exit 1
   fi
   
-  # Nettoyage des conteneurs existants
+  # Cleanup existing containers
   cleanup_containers
   
   # Step 2.5: Docker images download
-  next_step "Téléchargement des images Docker"
+  next_step "Downloading Docker images"
   if ! pull_docker_images; then
     exit 1
   fi
   
   # Step 2: Directories preparation
-  next_step "Préparation des répertoires de données"
+  next_step "Preparing data directories"
   local uid gid
   uid=$(id -u)
   gid=$(id -g)
@@ -649,6 +662,16 @@ umask 077
     mkdir -p "${AI_DATA_DIR}/$dir"
   done
   
+  # Create Notes directory for Samba share and Qdrant sync
+  if [ ! -d "./Notes" ]; then
+    mkdir -p "./Notes"
+    chmod 755 "./Notes"
+    chown "$uid:$gid" "./Notes" 2>/dev/null || true
+    log_info "Notes directory created"
+  else
+    log_info "Notes directory already exists"
+  fi
+  
   # Apply secure permissions
 for dir in openwebui n8n qdrant pgdata redis; do
     set_secure_permissions "${AI_DATA_DIR}/$dir" 700 600
@@ -657,12 +680,12 @@ for dir in openwebui n8n qdrant pgdata redis; do
   # Special permissions for ClickHouse (user 101:101)
   sudo chown -R 101:101 "${AI_DATA_DIR}/clickhouse" "${AI_DATA_DIR}/clickhouse-logs" 2>/dev/null || true
   sudo chmod -R 755 "${AI_DATA_DIR}/clickhouse" "${AI_DATA_DIR}/clickhouse-logs" 2>/dev/null || true
-  log_info "Permissions ClickHouse configurées (utilisateur 101:101)"
+  log_info "ClickHouse permissions configured (user 101:101)"
   
   # Special permissions for MinIO (user 1000:1000)
   sudo chown -R 1000:1000 "${AI_DATA_DIR}/minio" 2>/dev/null || true
   sudo chmod -R 755 "${AI_DATA_DIR}/minio" 2>/dev/null || true
-  log_info "Permissions MinIO configurées (utilisateur 1000:1000)"
+  log_info "MinIO permissions configured (user 1000:1000)"
   
   # Special permissions for SearxNG
   set_secure_permissions "${AI_DATA_DIR}/searxng" 755 644
@@ -674,7 +697,7 @@ for dir in openwebui n8n qdrant pgdata redis; do
   # Script d'initialisation PostgreSQL
   local init_sql="${AI_DATA_DIR}/postgres-init/01-create-langfuse.sql"
   if [ ! -f "$init_sql" ]; then
-    log_info "Création du script d'initialisation PostgreSQL"
+    log_info "Creating PostgreSQL initialization script"
     cat > "$init_sql" <<'EOSQL'
 SELECT 'CREATE DATABASE langfuse'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'langfuse')\gexec
@@ -682,27 +705,27 @@ EOSQL
     chmod 644 "$init_sql"
 fi
   
-  log_ok "Répertoires AI_Data préparés avec permissions sécurisées"
+  log_ok "AI_Data directories prepared with secure permissions"
 
   # Disk space check
-  check_disk_space || log_warn "Continuez avec prudence - espace disque limité"
+  check_disk_space || log_warn "Continue with caution - limited disk space"
 
   # Step 3: SearxNG configuration
-  next_step "Synchronisation de la configuration SearxNG"
+  next_step "Syncing SearxNG configuration"
 mkdir -p searxng
   
-  # Copie des fichiers de configuration
+  # Copy configuration files
   if [ -f settings.yml ] && [ ! -f searxng/settings.yml ]; then
     cp settings.yml searxng/settings.yml
-    log_info "settings.yml copié dans searxng/"
+    log_info "settings.yml copied to searxng/"
   fi
   
-  # Application des permissions aux fichiers de configuration
+  # Apply permissions to configuration files
   for f in searxng/settings.yml searxng/limiter.toml; do
     [ -f "$f" ] && chmod 644 "$f"
   done
   
-  # Copie vers AI_Data
+  # Copy to AI_Data
 if [ -d searxng ]; then
     mkdir -p "${AI_DATA_DIR}/searxng"
     cp -a searxng/. "${AI_DATA_DIR}/searxng/"
@@ -710,12 +733,12 @@ if [ -d searxng ]; then
     set_secure_permissions "${AI_DATA_DIR}/searxng" 755 644
   fi
   
-  log_ok "Templates SearxNG copiés"
+  log_ok "SearxNG templates copied"
   
   # Step 4: Base environment variables
-  next_step "Configuration des variables d'environnement de base"
+  next_step "Base environment variables configuration"
   bulk_set_env ensure \
-  OLLAMA_BASE_URL="http://192.168.0.2:11434" \
+  OLLAMA_BASE_URL="http://localhost:11434" \
   OPENWEBUI_PORT="8081" \
   SEARXNG_PORT="8082" \
   N8N_PORT="5678" \
@@ -732,26 +755,84 @@ if [ -d searxng ]; then
     local pg_password
     pg_password=$(openssl rand -hex 24)
     set_env_value POSTGRES_PASSWORD "$pg_password" enforce
-    log_info "Mot de passe PostgreSQL généré"
+    log_info "PostgreSQL password generated"
   fi
   
   set_env_value LANGFUSE_HOST "http://langfuse:3000" enforce
-  log_ok "Variables d'environnement de base configurées"
+  log_ok "Base environment variables configured"
   
   # Samba Share configuration (optional - network Notes sharing)
   if [ -z "$(get_env_value SAMBA_PASSWORD)" ]; then
-    local samba_password
-    samba_password=$(openssl rand -base64 24)
-    set_env_value SAMBA_USER "admin" enforce
+    local samba_user samba_password
+    
+    if [ "$INTERACTIVE_MODE" = "true" ]; then
+      printf "\n${YELLOW}Samba Share Configuration${RESET}\n"
+      printf "Samba share allows accessing Notes folder from Windows/Mac over the network\n\n"
+      
+      printf "Enter Samba username (default: admin): "
+      read -r samba_user
+      [ -z "$samba_user" ] && samba_user="admin"
+      
+      printf "Enter Samba password (or press Enter for auto-generation): "
+      read -rs samba_password
+      printf "\n"
+      
+      if [ -z "$samba_password" ]; then
+        samba_password=$(openssl rand -base64 24)
+        log_info "Samba password auto-generated"
+      else
+        log_info "Samba password set manually"
+      fi
+    else
+      samba_user="admin"
+      samba_password=$(openssl rand -base64 24)
+      log_info "Non-interactive mode, Samba credentials auto-generated"
+    fi
+    
+    set_env_value SAMBA_USER "$samba_user" enforce
     set_env_value SAMBA_PASSWORD "$samba_password" enforce
     set_env_value SAMBA_UID "1000" enforce
     set_env_value SAMBA_GID "1000" enforce
     set_env_value SAMBA_PORT "445" enforce
-    log_info "Samba Share credentials générés (pour accès réseau aux notes)"
+    set_env_value SAMBA_WORKGROUP "WORKGROUP" enforce
+    log_info "Samba Share configured (user: $samba_user)"
+  fi
+  
+  # Create Samba volumes.conf file (required for share configuration)
+  mkdir -p "./samba"
+  
+  # Remove if it's a directory (error from previous runs)
+  if [ -d "./samba/volumes.conf" ]; then
+    rm -rf "./samba/volumes.conf"
+    log_info "Removed incorrect directory samba/volumes.conf"
+  fi
+  
+  if [ ! -f "./samba/volumes.conf" ]; then
+    local samba_user_config
+    samba_user_config=$(get_env_value SAMBA_USER)
+    [ -z "$samba_user_config" ] && samba_user_config="admin"
+    
+    cat > "./samba/volumes.conf" << EOF
+[notes]
+path = /shares/notes
+browseable = yes
+read only = no
+guest ok = no
+valid users = $samba_user_config
+admin users = $samba_user_config
+write list = $samba_user_config
+create mask = 0664
+directory mask = 0775
+force create mode = 0664
+force directory mode = 0775
+EOF
+    log_info "Samba configuration file created (samba/volumes.conf)"
+  else
+    log_info "Samba configuration file already exists, skipping creation"
   fi
   
   # Step 5: Langfuse secrets configuration
-  next_step "Configuration des identifiants Langfuse"
+  next_step "Langfuse credentials configuration"
   
   # Generate secrets if necessary
   local secrets=(
@@ -766,7 +847,7 @@ if [ -d searxng ]; then
     
     if [ -z "$(get_env_value "$key")" ]; then
       set_env_value "$key" "$value" enforce
-      log_info "Secret généré: $key"
+      log_info "Secret generated: $key"
     fi
   done
   
@@ -781,10 +862,10 @@ if [ -d searxng ]; then
   local lf_db_url="postgresql://${lf_db_user}:${lf_db_pass}@postgres:5432/langfuse"
   set_env_value LANGFUSE_DATABASE_URL "$lf_db_url" enforce
   
-  log_ok "URL de base de données Langfuse configurée"
+  log_ok "Langfuse database URL configured"
   
   # Step 6: Default Langfuse headless configuration
-  next_step "Préparation des paramètres par défaut Langfuse headless"
+  next_step "Preparing Langfuse headless default parameters"
   
   local org_id="${LANGFUSE_INIT_ORG_ID:-FlowTech-LAB}"
   local proj_id="${LANGFUSE_INIT_PROJECT_ID:-default}"
@@ -844,27 +925,27 @@ if [ -d searxng ]; then
     local public_key
     public_key="lf_pk_$(openssl rand -hex 24)"
     set_env_value LANGFUSE_INIT_PROJECT_PUBLIC_KEY "$public_key" enforce
-    log_info "Clé API publique Langfuse générée"
+    log_info "Langfuse public API key generated"
   fi
   
   if [ -z "$(get_env_value LANGFUSE_INIT_PROJECT_SECRET_KEY)" ]; then
     local secret_key
     secret_key="lf_sk_$(openssl rand -hex 32)"
     set_env_value LANGFUSE_INIT_PROJECT_SECRET_KEY "$secret_key" enforce
-    log_info "Clé API secrète Langfuse générée"
+    log_info "Langfuse secret API key generated"
   fi
   
   # Generate n8n variables
   if [ -z "$(get_env_value N8N_BASIC_AUTH_USER)" ]; then
     set_env_value N8N_BASIC_AUTH_USER "admin" enforce
-    log_info "Utilisateur n8n configuré"
+    log_info "n8n user configured"
   fi
   
   if [ -z "$(get_env_value N8N_BASIC_AUTH_PASSWORD)" ]; then
     local n8n_password
     n8n_password=$(openssl rand -hex 18)
     set_env_value N8N_BASIC_AUTH_PASSWORD "$n8n_password" enforce
-    log_info "Mot de passe n8n généré"
+    log_info "n8n password generated"
   fi
   
   # Generate Bearer API key for n8n
@@ -872,7 +953,7 @@ if [ -d searxng ]; then
     local n8n_bearer_auth
     n8n_bearer_auth=$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 48)
     set_env_value N8N_SECURITY_API_BEARER_AUTH "$n8n_bearer_auth" enforce
-    log_info "Clé API Bearer n8n générée"
+    log_info "n8n Bearer API key generated"
   fi
   
   # Default parameters configuration
@@ -893,17 +974,17 @@ if [ -d searxng ]; then
   [ -z "$public_key_value" ] && set_env_value LANGFUSE_PUBLIC_KEY "$(get_env_value LANGFUSE_INIT_PROJECT_PUBLIC_KEY)" enforce
   [ -z "$secret_key_value" ] && set_env_value LANGFUSE_SECRET_KEY "$(get_env_value LANGFUSE_INIT_PROJECT_SECRET_KEY)" enforce
   
-  log_ok "Paramètres par défaut Langfuse headless configurés"
+  log_ok "Langfuse headless default parameters configured"
   
   # Step 7: Langfuse services configuration (ClickHouse, Redis, MinIO)
-  next_step "Configuration des services Langfuse"
+  next_step "Langfuse services configuration"
   
   # Variables ClickHouse
   if [ -z "$(get_env_value CLICKHOUSE_PASSWORD)" ]; then
     local ch_password
     ch_password=$(openssl rand -hex 18)
     set_env_value CLICKHOUSE_PASSWORD "$ch_password" enforce
-    log_info "Mot de passe ClickHouse généré"
+    log_info "ClickHouse password generated"
   fi
   
   # Variables Redis
@@ -911,7 +992,7 @@ if [ -d searxng ]; then
     local redis_password
     redis_password=$(openssl rand -hex 18)
     set_env_value REDIS_AUTH "$redis_password" enforce
-    log_info "Mot de passe Redis généré"
+    log_info "Redis password generated"
   fi
   
   # Variables MinIO
@@ -919,25 +1000,25 @@ if [ -d searxng ]; then
     local minio_password
     minio_password=$(openssl rand -hex 18)
     set_env_value MINIO_ROOT_PASSWORD "$minio_password" enforce
-    log_info "Mot de passe MinIO généré"
+    log_info "MinIO password generated"
   fi
   
-  log_ok "Services Langfuse configurés"
+  log_ok "Langfuse services configured"
   
   # Step 8: Start all services
-  next_step "Démarrage de tous les services"
+  next_step "Starting all services"
   
   # In DEV mode, delete database BEFORE starting Langfuse
   if [ "$DEV_MODE" = "true" ]; then
-    log_info "Mode DEV: Démarrage de PostgreSQL seul pour nettoyer la base"
+    log_info "DEV Mode: Starting PostgreSQL alone to clean database"
     docker compose up -d postgres
     
     # Wait for PostgreSQL and delete database
-    log_info "Attente de PostgreSQL..."
+    log_info "Waiting for PostgreSQL..."
     local count=0
     while [ $count -lt 30 ]; do
       if docker compose exec -T postgres pg_isready -U postgres >/dev/null 2>&1; then
-        log_ok "PostgreSQL est disponible"
+        log_ok "PostgreSQL is available"
         break
       fi
       sleep 2
@@ -945,62 +1026,108 @@ if [ -d searxng ]; then
     done
     
     if [ $count -lt 30 ]; then
-      log_info "Suppression de la base de données Langfuse"
+      log_info "Dropping Langfuse database"
       docker compose exec -T postgres psql -U postgres -c "DROP DATABASE IF EXISTS langfuse;" 2>/dev/null || true
-      log_info "Création de la base de données Langfuse"
+      log_info "Creating Langfuse database"
       docker compose exec -T postgres psql -U postgres -c "CREATE DATABASE langfuse;" 2>/dev/null || true
-      log_ok "Base de données Langfuse réinitialisée"
+      log_ok "Langfuse database reset"
     fi
   fi
   
   # Start all services (order managed by depends_on in docker-compose.yml)
-  next_step "Démarrage de tous les services (ordre optimisé)"
+  next_step "Starting all services (optimized order)"
   
   # Include samba profile if configured
   local compose_cmd="docker compose"
   if [ -n "$(get_env_value SAMBA_PASSWORD)" ]; then
     compose_cmd="docker compose --profile samba"
-    log_info "Samba Share activé"
+    log_info "Samba Share enabled"
   fi
   
   run_with_timeout "$SERVICE_START_TIMEOUT" "$compose_cmd up -d"
   
   # Wait for all services to be ready
-  log_info "Attente de la stabilisation des services (60s)..."
+  log_info "Waiting for services to stabilize (60s)..."
   sleep 60
   
   # Configuration ClickHouse
-  next_step "Configuration des utilisateurs ClickHouse"
+  next_step "ClickHouse users configuration"
   if configure_clickhouse; then
-    log_ok "Configuration ClickHouse terminée"
+    log_ok "ClickHouse configuration completed"
   else
-    log_warn "Échec de la configuration ClickHouse (non bloquant)"
+    log_warn "ClickHouse configuration failed (non-blocking)"
   fi
   
-  # Configuration Qdrant - Création des collections
-  next_step "Configuration des collections Qdrant"
+  # Qdrant configuration - Collections creation
+  next_step "Qdrant collections configuration"
   if configure_qdrant_collections; then
-    log_ok "Collections Qdrant créées"
+    log_ok "Qdrant collections created"
   else
-    log_warn "Échec de la création des collections Qdrant (non bloquant)"
+    log_warn "Qdrant collections creation failed (non-blocking)"
   fi
   
   
-  # Attendre que Langfuse soit disponible
+  # Wait for Langfuse availability
   local lf_url
   lf_url=$(get_env_value LANGFUSE_EXTERNAL_URL)
   [ -z "$lf_url" ] && lf_url="http://localhost:3300"
   
-  log_info "Attente de la disponibilité des services"
+  log_info "Waiting for services availability"
   if wait_for_http "$lf_url" 300 5; then
-    log_ok "Langfuse est disponible à $lf_url"
+    log_ok "Langfuse is available at $lf_url"
   else
-    log_warn "Langfuse n'est pas encore disponible, mais les services sont démarrés"
+    log_warn "Langfuse is not yet available, but services are started"
   fi
   
   # Quick health checks
-  log_info "Vérifications de santé rapides"
+  log_info "Quick health checks"
   run_with_timeout 10 "docker compose ps"
+  
+  # Setup Notes sync to Qdrant (optional)
+  if [ "$INTERACTIVE_MODE" = "true" ]; then
+    printf "\n${YELLOW}Notes Synchronization to Qdrant${RESET}\n"
+    printf "Do you want to enable automatic sync of Notes/ to Qdrant for AI context? (y/N): "
+    read -r enable_sync
+    
+    if [[ "$enable_sync" =~ ^[Yy]$ ]]; then
+      log_info "Setting up Notes sync environment..."
+      
+      # Check if Python venv exists
+      if [ ! -d "./scripts/venv" ]; then
+        log_info "Creating Python virtual environment..."
+        python3 -m venv ./scripts/venv
+        
+        log_info "Installing sync dependencies..."
+        ./scripts/venv/bin/pip install --quiet --upgrade pip
+        ./scripts/venv/bin/pip install --quiet -r ./scripts/requirements-sync.txt
+        
+        log_ok "Python environment ready"
+      fi
+      
+      # Run initial sync
+      log_info "Running initial Notes sync..."
+      if ./scripts/sync-notes.sh; then
+        log_ok "Initial sync completed"
+        
+        # Ask about cron installation
+        printf "Install hourly automatic sync via cron? (y/N): "
+        read -r install_cron
+        
+        if [[ "$install_cron" =~ ^[Yy]$ ]]; then
+          ./scripts/install-cron.sh
+          log_ok "Automatic sync enabled (hourly)"
+        else
+          log_info "You can run sync manually with: ./scripts/sync-notes.sh"
+        fi
+      else
+        log_warn "Initial sync failed (non-blocking)"
+      fi
+    else
+      log_info "Notes sync skipped. You can enable it later with: ./scripts/setup-sync.sh"
+    fi
+  else
+    log_info "Non-interactive mode: Notes sync skipped. Run ./scripts/setup-sync.sh to enable."
+  fi
   
   # Validation finale
   local required_vars=(
@@ -1014,14 +1141,14 @@ if [ -d searxng ]; then
     local value
     value=$(get_env_value "$var")
     if [ -z "$value" ]; then
-      log_error "Variable requise manquante: $var"
+      log_error "Required variable missing: $var"
       exit 1
     fi
   done
   
-  log_ok "Toutes les variables d'environnement critiques requises sont définies"
+  log_ok "All required critical environment variables are set"
   
-  # Résumé final
+  # Final summary
   show_final_summary
 }
 

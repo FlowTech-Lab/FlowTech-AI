@@ -181,7 +181,7 @@ nano ~/.cursor/mcp.json
 {
   "mcpServers": {
     "qdrant": {
-      "url": "http://192.168.0.246:8000/sse"  // ← Change to YOUR server IP
+      "url": "http://YOUR_SERVER_IP:8000/sse"  // ← Change to your server IP
     }
   }
 }

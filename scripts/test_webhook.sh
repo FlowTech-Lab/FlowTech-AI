@@ -45,10 +45,10 @@ fi
 
 # Test 2: Ollama check
 print_header "Test 2: Ollama check"
-if curl -s http://192.168.0.2:11434/api/tags > /dev/null; then
+if curl -s ${OLLAMA_BASE_URL:-http://localhost:11434}/api/tags > /dev/null; then
     print_success "Ollama is accessible"
     echo "Available models:"
-    curl -s http://192.168.0.2:11434/api/tags | jq -r '.models[].name' | head -5
+    curl -s ${OLLAMA_BASE_URL:-http://localhost:11434}/api/tags | jq -r '.models[].name' | head -5
 else
     print_error "Ollama is not accessible"
 fi
