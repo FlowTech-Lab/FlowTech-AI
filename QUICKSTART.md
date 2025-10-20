@@ -26,11 +26,27 @@ After `sudo ./init.sh`, you have access to:
 | Service | URL | Description |
 |---------|-----|-------------|
 | **OpenWebUI** | http://localhost:8081 | Conversational AI interface |
-| **Cursor MCP** | http://localhost:8000 | Cursor IDE integration |
+| **Cursor MCP** | http://localhost:8000 | Cursor code context |
+| **Cursor Knowledge** | http://localhost:8001 | Cursor notes search |
 | **n8n** | http://localhost:5678 | Automation workflows |
 | **Qdrant** | http://localhost:6333 | Vector database |
+| **Samba Share** | `\\YOUR_IP\notes` | Network share for notes |
 
 **Credentials**: Displayed at the end of `sudo ./init.sh`
+
+### Notes Sync Setup
+
+After initialization, you can sync your Markdown notes to make them searchable in Cursor:
+
+```bash
+# Initial sync
+./scripts/sync-notes.sh
+
+# Install hourly auto-sync (optional)
+./scripts/install-cron.sh
+```
+
+📖 **Full guide**: [Notes Sync Documentation](./docs/NOTES-SYNC.md)
 
 ## 🔧 Cursor Configuration
 

@@ -57,9 +57,11 @@ sudo ./init.sh
 | Service | Port | Description | Status |
 |---------|------|-------------|--------|
 | **OpenWebUI** | 8081 | AI chat interface with RAG | ✅ Production |
-| **MCP-Qdrant** | 8000 | Cursor IDE integration | ✅ Production |
+| **MCP-Qdrant** | 8000 | Cursor code context (cursor-context) | ✅ Production |
+| **MCP-Knowledge** | 8001 | Cursor notes search (cursor-knowledge) | ✅ Production |
 | **n8n** | 5678 | Workflow automation | ✅ Production |
 | **Qdrant** | 6333 | Vector database | ✅ Production |
+| **Samba** | 445 | Notes share (SMB) | ✅ Production |
 | **PostgreSQL** | 5432 | Metadata storage | ✅ Production |
 | **Redis** | 6379 | Cache & queues | ✅ Production |
 | **SearxNG** | 8082 | Web search engine | ✅ Production |
@@ -90,6 +92,40 @@ nano ~/.cursor/mcp.json
 - Store code snippets, notes, and context in Qdrant
 - Retrieve information semantically during coding
 - AI-enhanced development with persistent memory
+
+### Sync Your Notes Automatically
+
+**Sync Markdown notes to Cursor:**
+```bash
+# Initial sync
+./scripts/sync-notes.sh
+
+# Install hourly auto-sync
+./scripts/install-cron.sh
+```
+
+Your `Notes/` folder will be automatically synced to Qdrant and searchable in Cursor!
+
+📖 **See [Notes Sync Guide](./docs/NOTES-SYNC.md)** for details.
+
+### Access Notes via Network Share
+
+**Edit notes from Windows/Mac/Linux:**
+```bash
+# Windows
+\\YOUR_SERVER_IP\notes
+
+# Mac/Linux
+smb://YOUR_SERVER_IP/notes
+
+# Credentials (generated in .env during init.sh)
+Username: admin
+Password: Check your .env file (SAMBA_PASSWORD)
+```
+
+Open the share with **Obsidian** or any text editor to manage your notes!
+
+📖 **See [Samba Windows Guide](./SAMBA-WINDOWS-GUIDE.md)** for connection help.
 
 ---
 

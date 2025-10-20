@@ -406,48 +406,50 @@ fix_docker_compose() {
 
 # Container cleanup (with data deletion option)
 cleanup_containers() {
-  log_info "Nettoyage des conteneurs"
+  log_info "Cleaning up containers"
   
-  # Stop and remove all project containers
-  # IMPORTANT: Do NOT use --volumes flag to preserve databases!
-  docker compose down --remove-orphans 2>/dev/null || true
-  
-  # Clean unused images only
-  docker system prune -f 2>/dev/null || true
-  
-  # Suppression conditionnelle (DEV ONLY!)
   if [ "$DEV_MODE" = "true" ]; then
-    log_warn "⚠️  MODE DÉVELOPPEMENT: Suppression complète activée"
+    log_warn "⚠️  DEVELOPMENT MODE: Complete reset enabled"
+    
+    # Stop and remove all project containers WITH volumes
+    docker compose down --remove-orphans --volumes 2>/dev/null || true
     
     # Completely remove AI_Data directory
     if [ -d "$AI_DATA_DIR" ]; then
-      log_info "Suppression du répertoire AI_Data"
+      log_info "Removing AI_Data directory"
       sudo rm -rf "$AI_DATA_DIR" 2>/dev/null || rm -rf "$AI_DATA_DIR"
-      log_ok "Répertoire AI_Data supprimé"
+      log_ok "AI_Data directory removed"
     fi
     
-    # Supprimer le fichier .env
+    # Remove .env file
     if [ -f "$ENV_FILE" ]; then
-      log_info "Suppression du fichier .env"
+      log_info "Removing .env file"
       rm -f "$ENV_FILE"
-      log_ok "Fichier .env supprimé"
+      log_ok ".env file removed"
     fi
     
-    # Supprimer les logs
+    # Remove logs
     if [ -d "$LOG_DIR" ]; then
-      log_info "Suppression du répertoire logs"
+      log_info "Removing logs directory"
       rm -rf "$LOG_DIR"
-      log_ok "Répertoire logs supprimé"
+      log_ok "Logs directory removed"
     fi
     
-    # Completely clean Docker system and volumes
-    docker compose down --volumes 2>/dev/null || true
+    # Completely clean Docker system (without deleting images)
     docker system prune -f --volumes 2>/dev/null || true
     
-    log_ok "Nettoyage complet terminé (MODE DEV)"
+    log_ok "Complete cleanup finished (DEV MODE)"
   else
-    log_info "Nettoyage standard (données préservées)"
-    log_ok "Nettoyage terminé"
+    # NORMAL MODE: Stop containers but KEEP volumes and data
+    log_info "Standard cleanup (data preserved)"
+    
+    # Stop containers without removing volumes
+    docker compose down --remove-orphans 2>/dev/null || true
+    
+    # Only clean dangling resources (not volumes)
+    docker system prune -f 2>/dev/null || true
+    
+    log_ok "Cleanup finished - All data preserved"
   fi
 }
 

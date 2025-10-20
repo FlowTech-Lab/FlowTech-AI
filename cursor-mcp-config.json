@@ -5,11 +5,28 @@
       "args": [],
       "env": {},
       "disabled": false,
-      "alwaysAllow": [],
+      "alwaysAllow": [
+        "qdrant-find",
+        "qdrant-store"
+      ],
       "timeout": 30000,
       "transport": {
         "type": "sse",
         "url": "http://YOUR_SERVER_IP:8000/sse"
+      }
+    },
+    "qdrant-knowledge": {
+      "command": "node",
+      "args": [],
+      "env": {},
+      "disabled": false,
+      "alwaysAllow": [
+        "qdrant-find"
+      ],
+      "timeout": 30000,
+      "transport": {
+        "type": "sse",
+        "url": "http://YOUR_SERVER_IP:8001/sse"
       }
     }
   }
