@@ -190,6 +190,104 @@ AI: Based on the uploaded API docs, authentication uses JWT tokens...
 
 ---
 
+## 🌐 Internal Network URLs
+
+### Docker Internal Network (for service-to-service communication)
+
+Use these URLs when configuring **n8n workflows** or **OpenWebUI connections**:
+
+| Service | Internal URL | External Port | Auth Required | Credentials |
+|---------|-------------|---------------|---------------|-------------|
+| **Ollama** | `http://ollama:11434` | 11434 | ❌ No | - |
+| **OpenWebUI** | `http://openwebui:8080` | 8081 | ✅ Yes (Web UI) | First user registration |
+| **Qdrant** | `http://qdrant:6333` | 6333 | ❌ No (Internal only) | - |
+| **PostgreSQL** | `postgresql://postgres:5432/n8n` | 5432 | ✅ Yes | `POSTGRES_USER` / `POSTGRES_PASSWORD` |
+| **Redis** | `redis://redis:6379` | 6379 | ❌ No (Internal only) | - |
+| **SearxNG** | `http://searxng:8080` | 8082 | ❌ No | - |
+| **Langfuse** | `http://langfuse:3000` | 3300 | ✅ Yes (Web UI) | `LANGFUSE_INIT_USER_EMAIL` / `LANGFUSE_INIT_USER_PASSWORD` |
+| **n8n** | `http://n8n:5678` | 5678 | ✅ Yes (Web UI) | `N8N_BASIC_AUTH_USER` / `N8N_BASIC_AUTH_PASSWORD` |
+| **MCP-Qdrant** | `http://mcp-qdrant:8000` | 8000 | ❌ No (Internal only) | - |
+| **MCP-Knowledge** | `http://mcp-qdrant-knowledge:8001` | 8001 | ❌ No (Internal only) | - |
+| **Samba** | `smb://YOUR_IP/notes` | 445 | ✅ Yes | `admin` / `SAMBA_PASSWORD` |
+
+### 🔐 Credentials Reference
+
+All passwords are stored in your `.env` file after running `init.sh`:
+
+```bash
+# Services with Web UI Authentication
+N8N_BASIC_AUTH_USER=admin                    # n8n login
+N8N_BASIC_AUTH_PASSWORD=<generated>          # n8n password
+
+LANGFUSE_INIT_USER_EMAIL=admin@localhost     # Langfuse login
+LANGFUSE_INIT_USER_PASSWORD=<generated>      # Langfuse password
+
+# Database Credentials (internal use only)
+POSTGRES_USER=n8n                            # PostgreSQL user
+POSTGRES_PASSWORD=<generated>                # PostgreSQL password
+POSTGRES_DB=n8n                              # PostgreSQL database
+
+# Samba Share
+SAMBA_PASSWORD=<generated>                   # Windows/Mac/Linux share access
+# Username: admin
+
+# OpenWebUI
+# No pre-configured credentials - first user to register becomes admin
+```
+
+**📝 Note**: Services marked "Internal only" don't require authentication because they're not exposed to the external network (Docker internal network only).
+
+### External Access (from host machine or LAN)
+
+Replace `localhost` with your **server IP** when accessing from another machine:
+
+```bash
+# OpenWebUI
+http://localhost:8081       # From host
+http://192.168.x.x:8081     # From LAN
+
+# n8n
+http://localhost:5678       # From host
+http://192.168.x.x:5678     # From LAN
+
+# Qdrant Dashboard
+http://localhost:6333/dashboard
+```
+
+### Common Integration Examples
+
+#### n8n → Ollama
+```json
+{
+  "url": "http://ollama:11434/api/generate",
+  "method": "POST"
+}
+```
+
+#### OpenWebUI → Ollama
+```bash
+# In .env file
+OLLAMA_BASE_URL=http://ollama:11434
+```
+
+#### n8n → Qdrant
+```json
+{
+  "url": "http://qdrant:6333/collections/my-collection/points/search",
+  "method": "POST"
+}
+```
+
+#### n8n → SearxNG
+```json
+{
+  "url": "http://searxng:8080/search",
+  "method": "GET"
+}
+```
+
+---
+
 ## 🛠️ Advanced Usage
 
 ### Custom Workflows (n8n)
