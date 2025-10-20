@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Notes Front-matter Schema",
+  "description": "Schema for YAML front-matter in notes files",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["project", "note", "resource", "decision", "daily", "dump", "area"],
+      "description": "Type of the note"
+    },
+    "area": {
+      "type": "string",
+      "enum": ["fpv", "ia", "infrastructure", "trading", ""],
+      "description": "Area classification"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "hold", "done", "draft", "pending", "processed"],
+      "description": "Status of the note"
+    },
+    "owner": {
+      "type": "string",
+      "enum": ["flow"],
+      "description": "Owner of the note"
+    },
+    "created": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Creation date in YYYY-MM-DD format"
+    },
+    "updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Last update date in YYYY-MM-DD format"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of tags"
+    }
+  },
+  "required": ["type", "status", "owner", "created", "tags"],
+  "additionalProperties": false
+}

@@ -1,11 +1,11 @@
-# Charge les paramètres fournis par la communauté, optimisés pour production
+# Load community-provided settings, optimized for production
 use_default_settings: true
 
-# Désactive uniquement l’engine “yacy images” pour éviter l’erreur "Missing engine config attribute"
+# Disable only "yacy images" engine to avoid "Missing engine config attribute" error
 disabled_engines:
   - "yacy images"
 
-# Si besoin de limiter certains moteurs jugés trop lents ou gourmands :
+# If needed to limit some engines considered too slow or resource-intensive:
 # engines:
 #   - name: google
 #     engine: google
@@ -15,7 +15,7 @@ disabled_engines:
 #     disabled: false
 #   # etc.
 
-# Résolveurs de DOI (conserve)
+# DOI resolvers (preserved)
 default_doi_resolver: 'oadoi.org'
 doi_resolvers:
   oadoi.org: 'https://oadoi.org/'
@@ -25,31 +25,31 @@ doi_resolvers:
   sci-hub.st: 'https://sci-hub.st/'
   sci-hub.ru: 'https://sci-hub.ru/'
 
-# Serveur
+# Server
 server:
   bind_address: 0.0.0.0
   port: 8080
   base_url: "http://127.0.0.1:8082/"
-  secret_key: "<CLE_SECRETE_ALÉATOIRE>"
+  secret_key: "<RANDOM_SECRET_KEY>"
   limiter: false
-  trust_http_x_forwarded_for: true   # utile si derrière un reverse-proxy
-  num_proxies: 1                     # nombre de sauts X-Forwarded-For
+  trust_http_x_forwarded_for: true   # useful if behind reverse-proxy
+  num_proxies: 1                     # number of X-Forwarded-For hops
 
-# Anti-bot (désactivé en local, à activer en prod)
+# Anti-bot (disabled locally, enable in prod)
 botdetection:
   enabled: false
 
-# Recherche
+# Search
 search:
-  safe_search: 0                     # 0=off, 1=modéré, 2=strict
-  formats: [html, json, rss]         # RSS ajouté pour syndication
+  safe_search: 0                     # 0=off, 1=moderate, 2=strict
+  formats: [html, json, rss]         # RSS added for syndication
 
-# Interface utilisateur
+# User interface
 ui:
   theme_args:
     theme: auto
 
-# Logging (optionnel, pour debug)
+# Logging (optional, for debug)
 logging:
   level:
     root: INFO
