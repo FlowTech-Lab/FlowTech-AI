@@ -178,6 +178,39 @@ services:
           cpus: '0.25'
           memory: 256M
 
+  # MCP-Qdrant-Generic : Serveur MCP sans collection prédéfinie (flexible/dynamique)
+  # Permet de travailler avec plusieurs collections ou de créer des collections à la volée
+  mcp-qdrant-generic:
+    build:
+      context: ./mcp-qdrant
+      dockerfile: Dockerfile
+    image: flowtech/mcp-qdrant:latest
+    container_name: mcp-qdrant-generic
+    restart: unless-stopped
+    networks:
+      - flow-ai-network
+    depends_on:
+      qdrant:
+        condition: service_started
+    ports:
+      - "${MCP_QDRANT_GENERIC_PORT:-8002}:8000"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
+      - EMBEDDING_PROVIDER=fastembed
+      - FASTMCP_PORT=8000
+      - FASTMCP_HOST=0.0.0.0
+    volumes:
+      - ./.AI_Data/mcp-qdrant-generic:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
 
   # 6. Langfuse-worker - Migrations et traitement
   langfuse-worker:
