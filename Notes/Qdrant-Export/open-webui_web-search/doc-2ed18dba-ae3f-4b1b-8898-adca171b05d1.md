@@ -1,0 +1,8 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:31.742570'
+id: 2ed18dba-ae3f-4b1b-8898-adca171b05d1
+title: doc-2ed18dba-ae3f-4b1b-8898-adca171b05d1
+---
+
+<p>Retour sur la cyberattaque par rançongiciel qui a frappé Colonial Pipeline en mai 2021, attribuée au groupe DarkSide, et ses effets sur l’approvisionnement en carburant de la côte Est américaine. On explique le fonctionnement d’un ransomware, la chronologie de l’incident, les choix opérés par l’entreprise et les leçons pour les infrastructures critiques. Avec Jean-Baptiste Kempf et Hardisk, on décrypte les enjeux techniques, industriels et géopolitiques de cette affaire.</p><hr/><p><strong>En plateau</strong></p><ul>  <li>Michaël de Marliave — animateur</li>  <li>Jean-Baptiste Kempf — invité (VideoLAN/VLC)</li>  <li>Hardisk — invité</li></ul><p>Pour consulter les détails de l'offre Trade Republic : https://trade.re/Underscore_Pod</p><p>L'investissement comporte un risque de perte en capital. Les intérêts et les gains financiers sont soumis aux prélèvements fiscaux et sociaux. Les performances passé es ne garantissent pas les résultats futurs. Les fonds non-cotés sont des

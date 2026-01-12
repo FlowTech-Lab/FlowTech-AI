@@ -1,0 +1,8 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:33.045834'
+id: b40d35a9-c8a4-41bd-ad57-0abdeda97218
+title: doc-b40d35a9-c8a4-41bd-ad57-0abdeda97218
+---
+
+<p>Un scandale d’espionnage secoue la Silicon Valley : une taupe infiltrée chez Rippling aurait été recrutée par un concurrent pour siphonner des secrets. Pour la débusquer, Rippling met en place un canary trap, un piège inspiré des méthodes de renseignement, dont les détails ont émergé dans une plainte publique. Nous décortiquons pas à pas le stratagème, ce qu’il révèle des rivalités entre startups et les leçons de sécurité interne à en tirer.</p><hr/><p><strong>En plateau</strong></p><ul>  <li>Michaël de Marliave — animateur</li>  <li>Rémi Fleurance — chroniqueur</li>  <li>Matthieu Lambda — chroniqueur</li></ul><p>Pour consulter les détails de l'offre Trade Republic : https://trade.re/Underscore_Pod</p><p>L'investissement comporte un risque de perte en capital. Les intérêts et les gains financiers sont soumis aux prélèvements fiscaux et sociaux. Les performances passé es ne garantissent pas les résultats futurs. Les fonds non-cotés sont des investissements à long terme et ne

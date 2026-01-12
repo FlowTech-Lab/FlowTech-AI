@@ -109,15 +109,15 @@ services:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
 
-  # 5.1. MCP-Qdrant - Model Context Protocol Server for Cursor
-  # MCP-Qdrant : Collection cursor-context (read/write) for code
+  # 5.1. MCP-Qdrant-Context - Model Context Protocol Server for Cursor
+  # MCP-Qdrant-Context : Collection cursor-context (read/write) for code
   # Uses BAAI/bge-large-en-v1.5 (1024 dims, 1.2GB) via FastEmbed (Production-ready)
-  mcp-qdrant:
+  mcp-qdrant-context:
     build:
       context: ./mcp-qdrant
       dockerfile: Dockerfile
     image: flowtech/mcp-qdrant:latest
-    container_name: mcp-qdrant
+    container_name: mcp-qdrant-context
     restart: unless-stopped
     networks:
       - flow-ai-network
@@ -125,16 +125,16 @@ services:
       qdrant:
         condition: service_started
     ports:
-      - "${MCP_QDRANT_PORT:-8000}:8000"
+      - "${MCP_QDRANT_CONTEXT_PORT:-8000}:8000"
     environment:
       - QDRANT_URL=http://qdrant:6333
-      - COLLECTION_NAME=${MCP_QDRANT_COLLECTION:-cursor-context}
+      - COLLECTION_NAME=cursor-context
       - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
       - EMBEDDING_PROVIDER=fastembed
       - FASTMCP_PORT=8000
       - FASTMCP_HOST=0.0.0.0
     volumes:
-      - ./.AI_Data/mcp-qdrant:/app/data
+      - ./.AI_Data/mcp-qdrant-context:/app/data
     deploy:
       resources:
         limits:
@@ -178,39 +178,6 @@ services:
           cpus: '0.25'
           memory: 256M
 
-  # MCP-Qdrant-Generic : Serveur MCP sans collection prédéfinie (flexible/dynamique)
-  # Permet de travailler avec plusieurs collections ou de créer des collections à la volée
-  mcp-qdrant-generic:
-    build:
-      context: ./mcp-qdrant
-      dockerfile: Dockerfile
-    image: flowtech/mcp-qdrant:latest
-    container_name: mcp-qdrant-generic
-    restart: unless-stopped
-    networks:
-      - flow-ai-network
-    depends_on:
-      qdrant:
-        condition: service_started
-    ports:
-      - "${MCP_QDRANT_GENERIC_PORT:-8002}:8000"
-    environment:
-      - QDRANT_URL=http://qdrant:6333
-      - EMBEDDING_MODEL=BAAI/bge-large-en-v1.5
-      - EMBEDDING_PROVIDER=fastembed
-      - FASTMCP_PORT=8000
-      - FASTMCP_HOST=0.0.0.0
-    volumes:
-      - ./.AI_Data/mcp-qdrant-generic:/app/data
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 2G
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-
   # MCP-Qdrant-LOA-HF : Serveur MCP pour LOA-HF
   # Collection vectorielle dédiée "loa-hf" dans Qdrant
   mcp-qdrant-loa-hf:
@@ -244,6 +211,44 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
+
+  # Qdrant Export : Export automatique Qdrant → Markdown
+  # Exporte périodiquement les collections Qdrant vers Notes/Qdrant-Export/
+  qdrant-export:
+    build:
+      context: ./qdrant-export
+      dockerfile: Dockerfile
+    container_name: qdrant-export
+    restart: unless-stopped
+    networks:
+      - flow-ai-network
+    depends_on:
+      qdrant:
+        condition: service_started
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - EXPORT_DIR=/mnt/export
+      - EXPORT_SCHEDULE=${QDRANT_EXPORT_SCHEDULE:-0 2 * * *}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - EXPORT_MODE=${QDRANT_EXPORT_MODE:-normal}
+      - CLEANUP_ORPHANED=${QDRANT_EXPORT_CLEANUP:-false}
+    volumes:
+      - ./Notes/Qdrant-Export:/mnt/export:rw
+      - ./.AI_Data/qdrant-export:/app/data:rw
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/data/export-stats.json"]
+      interval: 1h
+      timeout: 10s
+      retries: 1
+      start_period: 5m
 
 
   # 6. Langfuse-worker - Migrations et traitement

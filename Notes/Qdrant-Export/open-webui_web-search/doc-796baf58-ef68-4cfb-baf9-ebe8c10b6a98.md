@@ -1,0 +1,47 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:32.440512'
+id: 796baf58-ef68-4cfb-baf9-ebe8c10b6a98
+title: doc-796baf58-ef68-4cfb-baf9-ebe8c10b6a98
+---
+
+Contribute
+
+
+
+Please keep the following in mind when posting a comment:
+Your comment must be in English or it will be removed.
+Unsure how to post? Check out our handy guide!
+You might want to proof-read your comments before posting them.
+Please post questions on our forums for quicker reply.
+
+
+
+Post a Comment 
+
+
+
+
+You are not logged in. Please log in or register an account to add your comment.
+
+
+
+
+    Simply browse for your screenshot using the form below.    
+Screenshots containing UI elements are generally declined on sight, the same goes for screenshots from the modelviewer or character selection screen.
+The higher the quality the better!
+Please review our Screenshot Guidelines before submitting!
+
+
+
+You are not logged in. Please log in to submit a screenshot.
+
+
+
+    Simply type the URL of the video in the form below.    
+
+
+        URL: 
+Supported: YouTube only
+
+            Title:  Optional, up to 200 characters

@@ -1,0 +1,17 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:31.765287'
+id: 3340edf2-aec3-43bc-ad14-b1ca601f920b
+title: doc-3340edf2-aec3-43bc-ad14-b1ca601f920b
+---
+
+Level 75 – Tier V
+
+A Murder of Crows✅
+This talent is the strongest Single-Target damage source from this tier; however, its activation can be tricky for beginners. Furthermore, its damage output is considerably more potent during execution phases as it can be triggered more often, but its high Focus cost makes it awkward to use. 
+Blink Strikes✅
+A much better-suited talent for both beginners and veterans, Blink Strikes provides a damage increase for your pet and the ability to teleport to faraway targets instantly. 
+Lynx Rush❌
+In theory, a good AoE talent, but in practice, one of the worst options from your talent tree. You should avoid this talent even in AoE scenarios, as Blink Strikes provides far better value from its 50% damage increase to your pet, which synergizes with Beast Cleave.
+
+Level 90 – Tier VI

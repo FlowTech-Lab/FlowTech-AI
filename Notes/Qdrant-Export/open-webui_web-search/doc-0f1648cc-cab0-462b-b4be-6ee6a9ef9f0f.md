@@ -1,0 +1,14 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:31.369136'
+id: 0f1648cc-cab0-462b-b4be-6ee6a9ef9f0f
+title: doc-0f1648cc-cab0-462b-b4be-6ee6a9ef9f0f
+---
+
+Weapon ( Lord Blastington's Scope of Doom) Taoren, the Soul Burner (Terrace of Endless Spring) 1 Fang Kung, Spark of Titans (Mogu'shan Vaults) 1 Malevolent Gladiator's Longbow (Sha of Anger / PvP) Klatith, Fangs of the Swarm (Gate of the Setting Sun) Yan-Zhu's Pressure Valve (Stormstout Brewery)
+1 Use the normal raid difficulty version of the item if you don’t have the heroic version. Use the celestial version if you don’t have any of the raid versions, but you’re farming August Stone Fragment from Celestial Dungeons.
+Golden Lotus is one of the most recommended factions for  Hunters for their  Windwalker Spaulders and  Anji's Keepsake to farm reputation. You can buy the items at the Golden Lotus quartermaster. Additionally, you might want to work on your reputation for The Klaxxi and Shado-Pan.
+Ad
+Beast Mastery Hunter Rotation in MoP Classic
+The rotation of a  Beast Mastery Hunter in MoP consists of the following priority list:
+Cast  Hunter's Mark before the fight starts.

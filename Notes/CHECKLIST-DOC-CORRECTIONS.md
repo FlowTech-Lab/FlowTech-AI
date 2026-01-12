@@ -29,7 +29,6 @@
 ```markdown
 | **MCP-Qdrant** | 8000 | Cursor code context (cursor-context) | ✅ Production |
 | **MCP-Qdrant-Knowledge** | 8001 | Cursor notes search (cursor-knowledge) | ✅ Production |
-| **MCP-Qdrant-Generic** | 8002 | Flexible collections (dynamic) | ✅ Production |
 | **MCP-Qdrant-LOA-HF** | 8003 | LOA-HF collection | ✅ Production |
 ```
 
@@ -64,7 +63,6 @@
 ```markdown
 | **MCP-Qdrant** | `http://mcp-qdrant:8000` | 8000 | ❌ No (Internal only) | - |
 | **MCP-Qdrant-Knowledge** | `http://mcp-qdrant-knowledge:8001` | 8001 | ❌ No (Internal only) | - |
-| **MCP-Qdrant-Generic** | `http://mcp-qdrant-generic:8002` | 8002 | ❌ No (Internal only) | - |
 | **MCP-Qdrant-LOA-HF** | `http://mcp-qdrant-loa-hf:8003` | 8003 | ❌ No (Internal only) | - |
 ```
 
@@ -125,7 +123,6 @@ Cursor IDE: @qdrant-knowledge find "query"
 ```markdown
 | **MCP-Qdrant** | 8000 | Cursor code context | ✅ Production |
 | **MCP-Qdrant-Knowledge** | 8001 | Cursor notes search | ✅ Production |
-| **MCP-Qdrant-Generic** | 8002 | Flexible collections | ✅ Production |
 | **MCP-Qdrant-LOA-HF** | 8003 | LOA-HF collection | ✅ Production |
 ```
 
@@ -175,7 +172,6 @@ The MCP-Qdrant servers enable **Cursor AI** to directly interact with your Qdran
 
 - **MCP-Qdrant** (port 8000): Code context storage (`cursor-context`)
 - **MCP-Qdrant-Knowledge** (port 8001): Notes search (`cursor-knowledge` or `flowtech-notes`)
-- **MCP-Qdrant-Generic** (port 8002): Flexible collections (dynamic)
 - **MCP-Qdrant-LOA-HF** (port 8003): LOA-HF collection
 
 This allows Cursor to:
@@ -260,12 +256,7 @@ FlowTech-AI runs **4 separate MCP-Qdrant instances** for different use cases:
    - Purpose: Notes and documentation search
    - Embedding: BAAI/bge-large-en-v1.5 (1024 dims)
 
-3. **mcp-qdrant-generic** (port 8002)
-   - Collection: Dynamic (flexible)
-   - Purpose: Ad-hoc collections
-   - Embedding: BAAI/bge-large-en-v1.5 (1024 dims)
-
-4. **mcp-qdrant-loa-hf** (port 8003)
+3. **mcp-qdrant-loa-hf** (port 8003)
    - Collection: `loa-hf`
    - Purpose: LOA-HF specific data
    - Embedding: BAAI/bge-large-en-v1.5 (1024 dims)

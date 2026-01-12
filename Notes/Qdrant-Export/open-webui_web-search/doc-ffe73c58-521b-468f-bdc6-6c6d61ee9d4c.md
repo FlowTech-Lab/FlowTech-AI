@@ -1,0 +1,8 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:33.682493'
+id: ffe73c58-521b-468f-bdc6-6c6d61ee9d4c
+title: doc-ffe73c58-521b-468f-bdc6-6c6d61ee9d4c
+---
+
+<p>L’équipe dévoile son bot d’autorégie qui gère automatiquement les changements de caméras pendant l’émission en direct. On explore ses logs en temps réel, les mécanismes de verrouillage pour éviter les clignotements et les transitions pensées pour rester fluides. Vous verrez comment le système décide quand couper, comment il se protège des erreurs et comment il s’intègre à la régie.</p><hr/><p><strong>En plateau</strong></p><ul>  <li>Michaël de Marliave — animateur</li></ul><p>Pour consulter les détails de l'offre Trade Republic : https://trade.re/Underscore_Pod</p><p>L'investissement comporte un risque de perte en capital. Les intérêts et les gains financiers sont soumis aux prélèvements fiscaux et sociaux. Les performances passé es ne garantissent pas les résultats futurs. Les fonds non-cotés sont des investissements à long terme et ne devraient représenter qu’une partie du portefeuille total.</p><hr><p style='color:grey; font-size:0.75em;'> Hébergé par Acast. Visitez <a

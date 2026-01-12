@@ -1,0 +1,8 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:33.253695'
+id: ca0fad6a-af8d-47c9-9a80-4bd92f48da02
+title: doc-ca0fad6a-af8d-47c9-9a80-4bd92f48da02
+---
+
+Classic. Discover top farming spots, routes, and methods to maximize gold per hour and rare item drops.Gaming NewsWOW MOP Classic Item Upgrade System Explained - Costs & TipsBySumant|August 26, 2025Learn how to upgrade gear in WoW MoP Classic with currencies & charms. Boost item levels, reforge stats, and optimize your gear for PvE & PvP.News commentNo resultsWrite commentSubmit commentLatest NewsMore >>How to Farm Chaos Armor Quickly in Diablo 4 Season 10 ByDawer Iqbal|September 30, 2025How to Farm Chaos Uniques in Diablo 4 Season 10 - 2 ByDawer Iqbal|September 30, 2025Hatchet DPS Build - New World Season 9: Top Tier DPS Setup & Rotation BySumant|September 29, 2025AOC Gold Farming: Top Artisan Professions & Crafting Guide for Max Profit ByHimanshu Cheeta|September 29, 2025EA Sports FC 26: Male Hidden Gems BySolomonJackson|September 28, 2025Popular NewsMore >>PoE 2 0.3 Best Atlas Tree Quick Endgame Progression Guide ByDawer Iqbal|September 5, 2025PoE 2 Next Big Update and Patch 0.3.0

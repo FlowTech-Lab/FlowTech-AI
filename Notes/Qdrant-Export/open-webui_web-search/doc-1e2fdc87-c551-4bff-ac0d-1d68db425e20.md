@@ -1,0 +1,17 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:31.548915'
+id: 1e2fdc87-c551-4bff-ac0d-1d68db425e20
+title: doc-1e2fdc87-c551-4bff-ac0d-1d68db425e20
+---
+
+Weaknesses
+
+While your beast pet is one of your greatest strengths, it does add a layer of complexity and micromanagement to the class. They can even be a liability if you don’t keep a close eye on them.
+Hunters are a pure DPS class, so you won’t be able to tank or heal for faster dungeon queues or a change of pace.
+The class’s survivability is based on avoiding getting hit, so you won’t have many options to mitigate or heal damage.
+
+Your trusty pet will protect you… but even if they don’t, you can always play dead
+
+ 
+Talent Builds

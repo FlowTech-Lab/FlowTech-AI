@@ -1,0 +1,8 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:32.676180'
+id: 8efbaa5f-fa3b-4165-b004-c5ce02cda9fa
+title: doc-8efbaa5f-fa3b-4165-b004-c5ce02cda9fa
+---
+
+<p>Que sont vraiment les CAPTCHA et pourquoi reposent-ils sur nos atouts humains, de la reconnaissance visuelle à la segmentation des lettres ? Nous passons en revue des techniques ingénieuses de contournement et ce qu’elles révèlent des limites intrinsèques de ces tests. Enfin, nous expliquons pourquoi ils deviennent de moins en moins efficaces face aux progrès de l’IA et de la vision par ordinateur, et ce que cela implique pour la sécurité en ligne.</p><hr/><p><strong>En plateau</strong></p><ul>  <li>Michaël de Marliave — animateur</li>  <li>Tiffany Souterre — chroniqueuse</li>  <li>Matthieu Lambda — chroniqueur</li></ul><p>Pour consulter les détails de l'offre Trade Republic : https://trade.re/Underscore_Pod</p><p>L'investissement comporte un risque de perte en capital. Les intérêts et les gains financiers sont soumis aux prélèvements fiscaux et sociaux. Les performances passé es ne garantissent pas les résultats futurs. Les fonds non-cotés sont des investissements à long terme et

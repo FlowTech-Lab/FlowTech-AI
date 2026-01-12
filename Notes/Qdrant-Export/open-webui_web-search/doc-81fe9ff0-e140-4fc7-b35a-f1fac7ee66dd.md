@@ -1,0 +1,8 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:32.565338'
+id: 81fe9ff0-e140-4fc7-b35a-f1fac7ee66dd
+title: doc-81fe9ff0-e140-4fc7-b35a-f1fac7ee66dd
+---
+
+<p>ChatGPT et en particulier GPT‑4 donnent-ils des réponses plus « paresseuses » qu’avant, comme le laissent penser des benchmarks et retours d’utilisateurs ? On analyse les écarts entre versions, la manière dont les évaluations sont faites et trois pistes d’explication solides, dont l’alignement, les changements de modèle et l’impact de la quantisation sur la qualité. Avec Michaël de Marliave, Matthieu Lambda et notre invité Ackanir, on discute comment mesurer une éventuelle régression et ce que cela implique pour l’usage des LLM.</p><hr/><p><strong>Sources</strong></p><ul>  <li><a href="https://youtu.be/roQ23g5pcOE">Ces nouveautés viennent de changer ChatGPT à jamais</a></li></ul><p><strong>En plateau</strong></p><ul>  <li>Michaël de Marliave — animateur</li>  <li>Matthieu Lambda — chroniqueur</li>  <li>Ackanir — invité</li></ul><p>Pour consulter les détails de l'offre Trade Republic : https://trade.re/Underscore_Pod</p><p>L'investissement comporte un risque de perte en capital. Les

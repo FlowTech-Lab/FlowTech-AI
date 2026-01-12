@@ -1,0 +1,8 @@
+---
+collection: cursor-context
+exported_at: '2026-01-11T22:30:22.030628'
+id: cf65fb43-a26a-4238-8fec-a2cb62556ffb
+title: doc-cf65fb43-a26a-4238-8fec-a2cb62556ffb
+---
+
+52Pi Mini Tower Kit V2 - Complete Technical Documentation (Oct 26, 2025). Hardware: Raspberry Pi 4 with 52Pi ABS Mini Tower Kit V2. GPIO Configuration: GPIO 14 (physical pin 8) for PWM fan control at 25kHz, GPIO 18 (physical pin 12) for WS2812B LED matrix 8x8 (64 LEDs), GPIO 2/3 for I2C OLED SSD1306 display. Three systemd services: minitower_fan_pwm.service (Python script fan_pwm.py, temperature control 40-55°C with hysteresis), minitower_temp_led.service (compiled C binary temp_led from modified main_temp.c, color based on CPU temperature), minitower_oled.service (Python sys_histogram.py for system monitoring). Fan control: thresholds T_OFF=40°C, T_LOW=45°C, T_MID=52°C, T_HIGH=55°C, D_MIN=30%, hysteresis 2°C, GPIO 14 PWM hardware. LED control: temperature-based colors with progressive transitions: Violet < 40°C (RGB 128,0,128), Violet→Blue 40-45°C, Blue→Green 45-48°C, Green→Orange 48-52°C, Orange→Red 52-60°C, Red ≥ 60°C (RGB 255,0,0). LED source code: /home/flowtech/rpi_ws281x/main_temp.c compiled with SCons to /usr/bin/temp_led. Function get_temp() calls vcgencmd measure_temp, function temp_to_color() converts temperature to RGB with interpolation, color format GBR (g<<16|b<<8|r). File permissions: /usr/local/minitower, /usr/bin/moodlight, /etc/systemd/system/minitower*.service owned by flowtech user for VS Code editing. Benchmark results: system reaches 52-53°C under full CPU load, LED colors transition smoothly from blue through green orange to red.

@@ -1,0 +1,8 @@
+---
+collection: open-webui_web-search
+exported_at: '2026-01-11T20:52:31.383355'
+id: 11aaf829-736a-4883-af8f-b7aede0d1ad5
+title: doc-11aaf829-736a-4883-af8f-b7aede0d1ad5
+---
+
+<p>On explore comment des modèles de langage peuvent être sabotés de l’intérieur via leurs données d’entraînement, jusqu’à déclencher des comportements malveillants à une date ou dans un contexte précis. Avec Wassim Bouaziz, doctorant entre Polytechnique et Meta, nous expliquons les principes des portes dérobées et des déclencheurs cachés, et ce que cela implique pour la sécurité et l’alignement des assistants IA. Vous découvrirez des pistes de détection et de mitigation, et pourquoi la conception des jeux de données peut se retourner contre vos propres systèmes.</p><hr/><p><strong>En plateau</strong></p><ul>  <li>Michaël de Marliave — animateur</li>  <li>Matthieu Lambda — chroniqueur</li>  <li>Wassim Bouaziz — invité</li></ul><p>Pour consulter les détails de l'offre Trade Republic : https://trade.re/Underscore_Pod</p><p>L'investissement comporte un risque de perte en capital. Les intérêts et les gains financiers sont soumis aux prélèvements fiscaux et sociaux. Les performances passé
