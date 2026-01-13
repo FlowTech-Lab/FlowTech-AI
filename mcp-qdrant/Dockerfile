@@ -17,7 +17,7 @@ RUN apt-get update && \
 # Install Python packages
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
-        mcp-server-qdrant \
+        "mcp-server-qdrant==0.8.0" \
         httpx \
         qdrant-client
 
